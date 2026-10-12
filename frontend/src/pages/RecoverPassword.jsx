@@ -1,3 +1,4 @@
+
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import OtpInput from '@/components/OtpInput'
@@ -5,11 +6,16 @@ import PasswordInput from '@/components/PasswordInput'
 import Progress from '@/components/Progress'
 import { api } from '@/api'
 import { CODE_LENGTH, PASSWORD_MIN, isEmail, maskEmail } from '@/utils/auth'
+import { useI18n } from '@/i18n'
 
-// Шаги: 1 — почта, 2 — код из письма, 3 — новый пароль.
-const CODE_ERRORS = ['INVALID_CODE', 'CODE_EXPIRED', 'CODE_ATTEMPTS_EXCEEDED']
+const CODE_ERRORS = [
+    'INVALID_CODE',
+    'CODE_EXPIRED',
+    'CODE_ATTEMPTS_EXCEEDED',
+]
 
 export default function RecoverPassword() {
+    const { t } = useI18n()
     const nav = useNavigate()
 
     const [step, setStep] = useState(1)
@@ -22,19 +28,19 @@ export default function RecoverPassword() {
 
     const passwordMismatch = confirm.length > 0 && password !== confirm
 
-    const sendCode = async (e) => {
-        e.preventDefault()
+    const sendCode = async (event) => {
+        event.preventDefault()
         setError('')
 
         const normalized = email.trim().toLowerCase()
 
         if (!normalized) {
-            setError('Введите почту')
+            setError(t('validation.emailRequired'))
             return
         }
 
         if (!isEmail(normalized)) {
-            setError('Введите корректный адрес почты')
+            setError(t('validation.emailInvalid'))
             return
         }
 
@@ -45,35 +51,37 @@ export default function RecoverPassword() {
             setEmail(normalized)
             setStep(2)
         } catch (err) {
-            setError(err?.message || 'Не удалось отправить код')
+            setError(err?.message || t('auth.sendCodeFailed'))
         } finally {
             setLoading(false)
         }
     }
 
-    const confirmCode = (e) => {
-        e.preventDefault()
+    const confirmCode = (event) => {
+        event.preventDefault()
         setError('')
 
         if (code.length !== CODE_LENGTH) {
-            setError(`Введите ${CODE_LENGTH}-значный код`)
+            setError(t('validation.codeLength', { length: CODE_LENGTH }))
             return
         }
 
         setStep(3)
     }
 
-    const resetPassword = async (e) => {
-        e.preventDefault()
+    const resetPassword = async (event) => {
+        event.preventDefault()
         setError('')
 
         if (password.length < PASSWORD_MIN) {
-            setError(`Пароль должен содержать минимум ${PASSWORD_MIN} символов`)
+            setError(
+                t('validation.passwordMin', { min: PASSWORD_MIN })
+            )
             return
         }
 
         if (password !== confirm) {
-            setError('Пароли не совпадают')
+            setError(t('validation.passwordMismatch'))
             return
         }
 
@@ -81,12 +89,15 @@ export default function RecoverPassword() {
 
         try {
             await api.resetPassword({ email, code, password })
+
             nav('/login', {
                 replace: true,
-                state: { notice: 'Пароль изменён. Войдите с новым паролем' },
+                state: {
+                    noticeKey: 'recover.changed',
+                },
             })
         } catch (err) {
-            setError(err?.message || 'Не удалось изменить пароль')
+            setError(err?.message || t('recover.failed'))
 
             if (CODE_ERRORS.includes(err?.code)) {
                 setCode('')
@@ -98,25 +109,25 @@ export default function RecoverPassword() {
     }
 
     return (
-        <section className="auth-card auth-card--narrow">
-
+        <section className="auth-card auth-card--narrow recovery-card">
             <Progress step={step} />
 
             <h1 className="auth-card__title auth-card__title--narrow">
-                Восстановление пароля
+                {t('recover.title')}
             </h1>
 
             {step === 1 && (
                 <>
                     <p className="auth-card__lead">
-                        Введите почту аккаунта. Пришлем код, затем
-                        <br />
-                        вы зададите новый пароль.
+                        {t('recover.lead')}
                     </p>
 
                     <form onSubmit={sendCode} noValidate>
-                        <label className="auth-label" htmlFor="recovery-email">
-                            почта:
+                        <label
+                            className="auth-label"
+                            htmlFor="recovery-email"
+                        >
+                            {t('recover.emailLabel')}
                         </label>
 
                         <input
@@ -126,8 +137,9 @@ export default function RecoverPassword() {
                             autoComplete="email"
                             placeholder="name@company.com"
                             value={email}
-                            onChange={(e) => setEmail(e.target.value)}
+                            onChange={(event) => setEmail(event.target.value)}
                             disabled={loading}
+                            required
                         />
 
                         {error && (
@@ -137,12 +149,15 @@ export default function RecoverPassword() {
                         )}
 
                         <p className="auth-notice">
-                            Если вы не запрашивали код,
-                            проигнорируйте письмо.
+                            {t('recover.ignore')}
                         </p>
 
-                        <button className="auth-btn" type="submit" disabled={loading}>
-                            {loading ? 'Отправка…' : 'Получить код'}
+                        <button
+                            className="auth-btn"
+                            type="submit"
+                            disabled={loading}
+                        >
+                            {loading ? t('common.sending') : t('auth.getCode')}
                         </button>
                     </form>
                 </>
@@ -151,9 +166,9 @@ export default function RecoverPassword() {
             {step === 2 && (
                 <>
                     <p className="auth-card__lead">
-                        Код отправлен на {maskEmail(email)}.
+                        {t('auth.codeSent', { email: maskEmail(email) })}
                         <br />
-                        Он действует 10 минут.
+                        {t('auth.codeValid')}
                     </p>
 
                     <form onSubmit={confirmCode}>
@@ -174,7 +189,7 @@ export default function RecoverPassword() {
                             type="submit"
                             disabled={code.length !== CODE_LENGTH}
                         >
-                            Продолжить
+                            {t('recover.continue')}
                         </button>
                     </form>
 
@@ -188,7 +203,7 @@ export default function RecoverPassword() {
                                 setStep(1)
                             }}
                         >
-                            Изменить почту
+                            {t('auth.changeEmail')}
                         </button>
                     </div>
                 </>
@@ -196,11 +211,16 @@ export default function RecoverPassword() {
 
             {step === 3 && (
                 <>
-                    <p className="auth-card__lead">Задайте новый пароль.</p>
+                    <p className="auth-card__lead">
+                        {t('recover.setPassword')}
+                    </p>
 
                     <form onSubmit={resetPassword} noValidate>
-                        <label className="auth-label" htmlFor="new-password">
-                            новый пароль:
+                        <label
+                            className="auth-label"
+                            htmlFor="new-password"
+                        >
+                            {t('recover.newPassword')}
                         </label>
 
                         <PasswordInput
@@ -208,17 +228,21 @@ export default function RecoverPassword() {
                             id="new-password"
                             autoComplete="new-password"
                             value={password}
-                            onChange={(e) => setPassword(e.target.value)}
+                            onChange={(event) =>
+                                setPassword(event.target.value)
+                            }
                             disabled={loading}
                         />
 
-                        <small className="auth-hint">От {PASSWORD_MIN} символов</small>
+                        <small className="auth-hint">
+                            {t('recover.passwordHint', { min: PASSWORD_MIN })}
+                        </small>
 
                         <label
                             className="auth-label profile-birth-label"
                             htmlFor="new-password-confirm"
                         >
-                            подтвердите пароль:
+                            {t('recover.confirmPassword')}
                         </label>
 
                         <PasswordInput
@@ -227,13 +251,15 @@ export default function RecoverPassword() {
                             invalid={passwordMismatch}
                             autoComplete="new-password"
                             value={confirm}
-                            onChange={(e) => setConfirm(e.target.value)}
+                            onChange={(event) =>
+                                setConfirm(event.target.value)
+                            }
                             disabled={loading}
                         />
 
                         {passwordMismatch && (
                             <small className="auth-hint auth-hint--error">
-                                Пароли не совпадают
+                                {t('validation.passwordMismatch')}
                             </small>
                         )}
 
@@ -249,7 +275,7 @@ export default function RecoverPassword() {
                             style={{ marginTop: 18 }}
                             disabled={loading || passwordMismatch}
                         >
-                            {loading ? 'Сохранение…' : 'Сменить пароль'}
+                            {loading ? t('common.saving') : t('recover.submit')}
                         </button>
                     </form>
                 </>
@@ -258,11 +284,10 @@ export default function RecoverPassword() {
             {step !== 2 && (
                 <div className="auth-bottom auth-bottom--center">
                     <Link to="/login" className="orange">
-                        Вернуться ко входу
+                        {t('recover.back')}
                     </Link>
                 </div>
             )}
-
         </section>
     )
 }

@@ -8,11 +8,16 @@ export default function Button({
                                    ...rest
                                }) {
     const classes = ['btn', `btn--${variant}`]
+
     if (fullWidth) classes.push('btn--full')
     if (lg) classes.push('btn--lg')
 
     return (
-        <button className={classes.join(' ')} disabled={disabled || loading} {...rest}>
+        <button
+            className={classes.join(' ')}
+            disabled={disabled || loading}
+            {...rest}
+        >
             {loading ? '…' : children}
         </button>
     )

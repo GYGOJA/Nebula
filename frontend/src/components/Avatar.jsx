@@ -1,9 +1,13 @@
+import { useI18n } from '@/i18n'
+import { assetUrl } from '@/api/client'
+
 export default function Avatar({
                                    src,
                                    label = '',
                                    size = 40,
                                    className = '',
                                }) {
+    const { t } = useI18n()
     const classes = ['avatar', className].filter(Boolean).join(' ')
 
     return (
@@ -14,12 +18,12 @@ export default function Avatar({
                 height: size,
                 flexBasis: size,
             }}
-            aria-label={label || 'Аватар пользователя'}
+            aria-label={label || t('common.userAvatar')}
         >
             {src ? (
                 <img
                     className="avatar__image"
-                    src={src}
+                    src={assetUrl(src)}
                     alt=""
                     loading="lazy"
                     onError={(event) => {

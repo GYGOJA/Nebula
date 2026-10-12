@@ -2,8 +2,10 @@ import { NavLink } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import Logo from './Logo'
 import { api } from '@/api'
+import { useI18n } from '@/i18n'
 
 export default function NavigationRail({ activeSpaceId }) {
+    const { t } = useI18n()
     const [spaces, setSpaces] = useState([])
 
     useEffect(() => {
@@ -34,8 +36,8 @@ export default function NavigationRail({ activeSpaceId }) {
                         isActive && !activeSpaceId ? 'rail__btn--active' : ''
                     }`
                 }
-                title="Главная"
-                aria-label="Главная"
+                title={t('nav.home')}
+                aria-label={t('nav.home')}
             >
                 <span className="icon-placeholder" aria-hidden="true" />
             </NavLink>
@@ -62,8 +64,8 @@ export default function NavigationRail({ activeSpaceId }) {
             <NavLink
                 to="/app/spaces/new"
                 className="rail__btn rail__add"
-                title="Создать пространство"
-                aria-label="Создать пространство"
+                title={t('nav.createSpace')}
+                aria-label={t('nav.createSpace')}
             >
                 <span className="icon-placeholder" aria-hidden="true" />
             </NavLink>

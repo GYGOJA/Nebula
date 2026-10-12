@@ -1,3 +1,5 @@
+import { getLanguage } from '@/i18n'
+
 export const currentUser = {
     id: 'me',
     name: '',
@@ -22,16 +24,26 @@ export const directMessages = {}
 export const voiceRooms = []
 export const notifications = []
 
+let cachedSettings = {}
+
+try {
+    cachedSettings = JSON.parse(
+        localStorage.getItem('nebula_settings') || '{}'
+    )
+} catch {}
+
 export const settingsDefaults = {
-    theme: 'dark',
-    language: 'ru',
+    theme: cachedSettings.theme || 'dark',
+    language: getLanguage(),
     notifications: {
         desktop: true,
         sounds: true,
         mentions: true,
+        ...(cachedSettings.notifications || {}),
     },
     privacy: {
         dmFromEveryone: true,
         showOnlineStatus: true,
+        ...(cachedSettings.privacy || {}),
     },
 }

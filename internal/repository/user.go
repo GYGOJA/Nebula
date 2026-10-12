@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/TheLonger011/Nebula/internal/models"
 	"github.com/google/uuid"
@@ -100,4 +101,19 @@ func (r *UserRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.Use
 		FROM users
 		WHERE id = $1 AND deleted_at IS NULL`
 	return scanUser(r.db.QueryRow(ctx, q, id))
+}
+
+func (r *UserRepository) UpdateProfile(ctx context.Context, id uuid.UUID, username, displayName, bio, avatarURL, statusText, pronouns, website, location string, birthDate *time.Time) (*models.User, error) {
+	var birth any
+	if birthDate != nil {
+		birth = *birthDate
+	}
+	_, err := r.db.Exec(ctx, `UPDATE users SET username=$2, display_name=$3, bio=NULLIF($4,''), avatar_url=NULLIF($5,''), status_text=NULLIF($6,''), pronouns=NULLIF($7,''), website=NULLIF($8,''), location=NULLIF($9,''), birth_date=COALESCE($10,birth_date), updated_at=NOW() WHERE id=$1 AND deleted_at IS NULL`, id, username, displayName, bio, avatarURL, statusText, pronouns, website, location, birth)
+	if err != nil {
+		if pgErrCode(err) == "23505" {
+			return nil, ErrUsernameTaken
+		}
+		return nil, fmt.Errorf("update profile: %w", err)
+	}
+	return r.GetByID(ctx, id)
 }

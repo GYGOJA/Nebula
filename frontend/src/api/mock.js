@@ -12,6 +12,7 @@ import {
     settingsDefaults,
 } from '@/mocks/data'
 import { ApiError } from '@/api/client'
+import { getLocale, t } from '@/i18n'
 
 const wait = (ms = 250) => new Promise((resolve) => setTimeout(resolve, ms))
 
@@ -39,7 +40,7 @@ export const mockApi = {
     async login({ login, password }) {
         await wait()
 
-        if (!login || !password) fail('Введите логин и пароль')
+        if (!login || !password) fail(t('login.enterCredentials'))
 
         const isEmail = login.includes('@')
 
@@ -54,25 +55,32 @@ export const mockApi = {
 
     async sendCode({ email }) {
         await wait()
-        if (!email) fail('Введите почту')
+        if (!email) fail(t('validation.emailRequired'))
         return { ok: true }
     },
 
     async verifyCode({ email, code }) {
         await wait()
-        if (!email) fail('Почта не указана')
+        if (!email) fail(t('mock.emailMissing'))
+
         if (!/^\d{6}$/.test(code)) {
-            fail('Введите 6-значный код', 'INVALID_CODE')
+            fail(t('validation.codeLength', { length: 6 }), 'INVALID_CODE')
         }
 
         return { ok: true, ticket: 'mock-ticket' }
     },
 
-    async completeProfile({ email, ticket, username, displayName, birthDate }) {
+    async completeProfile({
+                              email,
+                              ticket,
+                              username,
+                              displayName,
+                              birthDate,
+                          }) {
         await wait()
 
         if (!email || !ticket) {
-            fail('Подтвердите почту, чтобы продолжить')
+            fail(t('mock.confirmEmail'))
         }
 
         const user = {
@@ -86,24 +94,27 @@ export const mockApi = {
         }
 
         state.profile = user
+
         return { token: 'mock-token', user }
     },
 
     async recover({ email }) {
         await wait()
-        if (!email) fail('Введите почту')
+        if (!email) fail(t('validation.emailRequired'))
         return { ok: true }
     },
 
     async resetPassword({ email, code, password }) {
         await wait()
 
-        if (!email) fail('Почта не указана')
+        if (!email) fail(t('mock.emailMissing'))
+
         if (!/^\d{6}$/.test(code)) {
-            fail('Введите 6-значный код', 'INVALID_CODE')
+            fail(t('validation.codeLength', { length: 6 }), 'INVALID_CODE')
         }
+
         if (!password || password.length < 8) {
-            fail('Пароль должен содержать минимум 8 символов')
+            fail(t('validation.passwordMin', { min: 8 }))
         }
 
         return { ok: true }
@@ -120,6 +131,30 @@ export const mockApi = {
         return { ...state.profile }
     },
 
+    async uploadAvatar(blob) {
+        await wait()
+        state.profile = { ...state.profile, avatarUrl: URL.createObjectURL(blob) }
+        return { ...state.profile }
+    },
+
+    async removeAvatar() {
+        await wait()
+        state.profile = { ...state.profile, avatarUrl: '', avatar: '' }
+        return { ...state.profile }
+    },
+
+    async getUser(id) {
+        await wait()
+        const friend = state.friends.find((item) => String(item.id) === String(id))
+        if (!friend) throw new Error('Пользователь не найден')
+        return {
+            ...friend,
+            userId: friend.id,
+            displayName: friend.name,
+            relationship: 'friends',
+        }
+    },
+
     async getSettings() {
         await wait()
         return { ...state.settings }
@@ -127,16 +162,37 @@ export const mockApi = {
 
     async updateSettings(patch) {
         await wait()
-        state.settings = { ...state.settings, ...patch }
+
+        state.settings = {
+            ...state.settings,
+            ...patch,
+            notifications: {
+                ...state.settings.notifications,
+                ...(patch.notifications || {}),
+            },
+            privacy: {
+                ...state.settings.privacy,
+                ...(patch.privacy || {}),
+            },
+        }
+
+        try {
+            localStorage.setItem(
+                'nebula_settings',
+                JSON.stringify(state.settings)
+            )
+        } catch {}
+
         return { ...state.settings }
     },
 
     async changePassword({ current, next }) {
         await wait()
 
-        if (!current || !next) fail('Заполните поля')
+        if (!current || !next) fail(t('mock.fillFields'))
+
         if (next.length < 8) {
-            fail('Пароль должен содержать минимум 8 символов')
+            fail(t('validation.passwordMin', { min: 8 }))
         }
 
         return { ok: true }
@@ -151,7 +207,8 @@ export const mockApi = {
         await wait()
 
         const space = state.spaces.find((item) => item.id === id)
-        if (!space) fail('Пространство не найдено', 'NOT_FOUND')
+
+        if (!space) fail(t('mock.spaceNotFound'), 'NOT_FOUND')
 
         return {
             ...space,
@@ -171,7 +228,7 @@ export const mockApi = {
     async createSpace({ name }) {
         await wait()
 
-        if (!name?.trim()) fail('Введите название')
+        if (!name?.trim()) fail(t('validation.nameRequired'))
 
         const space = {
             id: `sp-${Date.now()}`,
@@ -186,19 +243,21 @@ export const mockApi = {
 
     async getMessages(channelId) {
         await wait()
-        return (state.messagesStore[channelId] || []).map((message) => ({ ...message }))
+        return (state.messagesStore[channelId] || []).map((message) => ({
+            ...message,
+        }))
     },
 
     async sendMessage(channelId, content) {
         await wait(150)
 
         const text = content?.trim()
-        if (!text) fail('Пустое сообщение')
+        if (!text) fail(t('errors.emptyMessage'))
 
         const message = {
             id: `m-${Date.now()}`,
             authorId: 'me',
-            time: new Date().toLocaleTimeString('ru-RU', {
+            time: new Date().toLocaleTimeString(getLocale(), {
                 hour: '2-digit',
                 minute: '2-digit',
             }),
@@ -234,9 +293,11 @@ export const mockApi = {
         await wait()
 
         const request = state.incoming.find((item) => item.id === id)
-        if (!request) fail('Заявка не найдена', 'NOT_FOUND')
+
+        if (!request) fail(t('mock.requestNotFound'), 'NOT_FOUND')
 
         state.incoming = state.incoming.filter((item) => item.id !== id)
+
         state.friends.push({
             id: request.id,
             name: request.name,
@@ -263,12 +324,12 @@ export const mockApi = {
     async sendFriendRequest({ username }) {
         await wait()
 
-        if (!username?.trim()) fail('Введите username')
+        if (!username?.trim()) fail(t('validation.usernameRequired'))
 
         const normalized = username.replace(/^@/, '')
         const user = state.users.find((item) => item.username === normalized)
 
-        if (!user) fail('Пользователь не найден', 'NOT_FOUND')
+        if (!user) fail(t('mock.userNotFound'), 'NOT_FOUND')
 
         const request = {
             id: `r-${Date.now()}`,
@@ -343,6 +404,11 @@ export const mockApi = {
         })
     },
 
+    async getDmPeer(userId) {
+        const friends = await this.getFriends()
+        return friends.find((f) => String(f.id) === String(userId)) || null
+    },
+
     async getDmMessages(userId) {
         await wait()
         return (state.dm[userId] || []).map((message) => ({ ...message }))
@@ -352,13 +418,13 @@ export const mockApi = {
         await wait(150)
 
         const text = content?.trim()
-        if (!text) fail('Пустое сообщение')
+        if (!text) fail(t('errors.emptyMessage'))
 
         const message = {
             id: `dm-${Date.now()}`,
             from: 'me',
             text,
-            time: new Date().toLocaleTimeString('ru-RU', {
+            time: new Date().toLocaleTimeString(getLocale(), {
                 hour: '2-digit',
                 minute: '2-digit',
             }),
@@ -382,7 +448,8 @@ export const mockApi = {
         await wait()
 
         const room = state.voice.find((item) => item.id === roomId)
-        if (!room) fail('Комната не найдена', 'NOT_FOUND')
+
+        if (!room) fail(t('voice.notFoundTitle'), 'NOT_FOUND')
 
         if (!room.participants.includes('me')) {
             room.participants.push('me')
@@ -408,7 +475,7 @@ export const mockApi = {
     async createInvite({ spaceId }) {
         await wait()
 
-        if (!spaceId) fail('Пространство не указано')
+        if (!spaceId) fail(t('mock.spaceMissing'))
 
         const code = Math.random().toString(36).slice(2, 10)
 
@@ -416,17 +483,19 @@ export const mockApi = {
             code,
             url: `${window.location.origin}/invite/${code}`,
             spaceId,
-            expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+            expiresAt: new Date(
+                Date.now() + 7 * 24 * 60 * 60 * 1000
+            ).toISOString(),
         }
     },
 
     async acceptInvite({ code }) {
         await wait()
 
-        if (!code) fail('Код не указан')
+        if (!code) fail(t('mock.codeMissing'))
 
         const space = state.spaces[0]
-        if (!space) fail('Нет доступных пространств', 'NOT_FOUND')
+        if (!space) fail(t('mock.noSpaces'), 'NOT_FOUND')
 
         return { space }
     },

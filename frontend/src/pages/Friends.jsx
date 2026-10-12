@@ -7,8 +7,10 @@ import PageHeader from '@/components/PageHeader'
 import Avatar from '@/components/Avatar'
 import EmptyState from '@/components/EmptyState'
 import { api } from '@/api'
+import { useI18n } from '@/i18n'
 
 export default function Friends() {
+    const { t } = useI18n()
     const [friends, setFriends] = useState([])
     const [requests, setRequests] = useState({ incoming: [], outgoing: [] })
     const [loading, setLoading] = useState(true)
@@ -32,7 +34,7 @@ export default function Friends() {
                 outgoing: friendRequests?.outgoing || [],
             })
         } catch (err) {
-            setError(err?.message || 'Не удалось загрузить друзей')
+            setError(err?.message || t('friends.loadFailed'))
         } finally {
             setLoading(false)
         }
@@ -50,10 +52,22 @@ export default function Friends() {
         try {
             await api.sendFriendRequest({ username: username.trim() })
             setUsername('')
-            setNotice('Заявка отправлена')
+            setNotice(t('friends.requestSent'))
             await load()
         } catch (err) {
-            setError(err?.message || 'Не удалось отправить заявку')
+            setError(err?.message || t('friends.sendFailed'))
+        }
+    }
+
+    const cancelRequest = async (id) => {
+        setError('')
+        setNotice('')
+        try {
+            await api.cancelFriendRequest(id)
+            setNotice('Заявка отменена')
+            await load()
+        } catch (err) {
+            setError(err?.message || 'Не удалось отменить заявку')
         }
     }
 
@@ -69,7 +83,7 @@ export default function Friends() {
 
             await load()
         } catch (err) {
-            setError(err?.message || 'Не удалось обработать заявку')
+            setError(err?.message || t('friends.handleFailed'))
         }
     }
 
@@ -80,7 +94,7 @@ export default function Friends() {
             await api.removeFriend(id)
             await load()
         } catch (err) {
-            setError(err?.message || 'Не удалось удалить пользователя')
+            setError(err?.message || t('friends.removeFailed'))
         }
     }
 
@@ -91,11 +105,11 @@ export default function Friends() {
 
             <main className="main">
                 <div className="main__content">
-                    <PageHeader title="Друзья" />
+                    <PageHeader title={t('nav.friends')} />
 
                     <form className="friends__add-form" onSubmit={sendRequest}>
                         <label htmlFor="friend-username">
-                            Добавить друга по username
+                            {t('friends.addByUsername')}
                         </label>
 
                         <div className="friends__add-row">
@@ -104,31 +118,28 @@ export default function Friends() {
                                 className="input"
                                 value={username}
                                 onChange={(event) => setUsername(event.target.value)}
-                                placeholder="@username"
+                                placeholder={t('friends.usernamePlaceholder')}
                                 autoComplete="off"
                                 required
                             />
 
-                            <button
-                                type="submit"
-                                className="btn btn--primary"
-                            >
-                                Добавить
+                            <button type="submit" className="btn btn--primary">
+                                {t('friends.add')}
                             </button>
                         </div>
                     </form>
 
                     {notice && <p className="form-notice">{notice}</p>}
                     {error && <p className="auth-inline-error">{error}</p>}
-                    {loading && <p className="muted">Загрузка…</p>}
+                    {loading && <p className="muted">{t('common.loading')}</p>}
 
-                    {!loading && !error && (
+                    {!loading && (
                         <>
                             <section className="friends__section">
-                                <h2 className="section-title">Входящие заявки</h2>
+                                <h2 className="section-title">{t('friends.incoming')}</h2>
 
                                 {requests.incoming.length === 0 ? (
-                                    <p className="muted">Новых заявок нет</p>
+                                    <p className="muted">{t('friends.noRequests')}</p>
                                 ) : (
                                     <div className="friend-list">
                                         {requests.incoming.map((request) => (
@@ -136,39 +147,39 @@ export default function Friends() {
                                                 key={request.id}
                                                 className="friend-row"
                                             >
-                                                <Avatar
-                                                    src={request.avatarUrl || request.avatar}
-                                                    label={request.name}
-                                                    size={44}
-                                                />
+                                                <Link to={`/app/users/${request.userId}`}>
+                                                    <Avatar
+                                                        src={request.avatarUrl || request.avatar}
+                                                        label={request.name}
+                                                        size={44}
+                                                    />
+                                                </Link>
 
                                                 <div className="friend-row__info">
                                                     <div className="friend-row__name">
-                                                        {request.displayName || request.name}
+                                                        <Link to={`/app/users/${request.userId}`}>
+                                                            {request.displayName || request.name}
+                                                        </Link>
                                                     </div>
                                                     <div className="friend-row__status">
-                                                        Заявка в друзья
+                                                        {t('friends.requestLabel')}
                                                     </div>
                                                 </div>
 
                                                 <button
                                                     type="button"
                                                     className="btn btn--primary"
-                                                    onClick={() =>
-                                                        handleRequest(request.id, 'accept')
-                                                    }
+                                                    onClick={() => handleRequest(request.id, 'accept')}
                                                 >
-                                                    Принять
+                                                    {t('friends.accept')}
                                                 </button>
 
                                                 <button
                                                     type="button"
                                                     className="btn btn--ghost"
-                                                    onClick={() =>
-                                                        handleRequest(request.id, 'decline')
-                                                    }
+                                                    onClick={() => handleRequest(request.id, 'decline')}
                                                 >
-                                                    Отклонить
+                                                    {t('friends.decline')}
                                                 </button>
                                             </div>
                                         ))}
@@ -177,12 +188,32 @@ export default function Friends() {
                             </section>
 
                             <section className="friends__section">
-                                <h2 className="section-title">Мои друзья</h2>
+                                <h2 className="section-title">Исходящие заявки</h2>
+                                {requests.outgoing.length === 0 ? (
+                                    <p className="muted">Нет заявок, ожидающих ответа</p>
+                                ) : (
+                                    <div className="friend-list">
+                                        {requests.outgoing.map((request) => (
+                                            <div key={request.id} className="friend-row">
+                                                <Avatar src={request.avatarUrl || request.avatar} label={request.name} size={44} />
+                                                <div className="friend-row__info">
+                                                    <div className="friend-row__name">{request.displayName || request.name}</div>
+                                                    <div className="friend-row__status">Ожидает ответа</div>
+                                                </div>
+                                                <button type="button" className="btn btn--ghost" onClick={() => cancelRequest(request.id)}>Отменить заявку</button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </section>
+
+                            <section className="friends__section">
+                                <h2 className="section-title">{t('friends.mine')}</h2>
 
                                 {friends.length === 0 ? (
                                     <EmptyState
-                                        title="Список друзей пуст"
-                                        description="Найдите пользователя и отправьте ему заявку в друзья."
+                                        title={t('friends.emptyTitle')}
+                                        description={t('friends.emptyDesc')}
                                     />
                                 ) : (
                                     <div className="friend-list">
@@ -191,22 +222,26 @@ export default function Friends() {
                                                 key={friend.id}
                                                 className="friend-row"
                                             >
-                                                <Avatar
-                                                    src={friend.avatarUrl || friend.avatar}
-                                                    label={friend.name}
-                                                    size={44}
-                                                />
+                                                <Link to={`/app/users/${friend.id}`}>
+                                                    <Avatar
+                                                        src={friend.avatarUrl || friend.avatar}
+                                                        label={friend.name}
+                                                        size={44}
+                                                    />
+                                                </Link>
 
                                                 <div className="friend-row__info">
                                                     <div className="friend-row__name">
-                                                        {friend.displayName || friend.name}
+                                                        <Link to={`/app/users/${friend.id}`}>
+                                                            {friend.displayName || friend.name}
+                                                        </Link>
                                                     </div>
                                                     <div className="friend-row__status">
                                                         {friend.status === 'online'
-                                                            ? 'В сети'
+                                                            ? t('friends.statusOnline')
                                                             : friend.status === 'offline'
-                                                                ? 'Не в сети'
-                                                                : 'Статус недоступен'}
+                                                                ? t('friends.statusOffline')
+                                                                : t('friends.statusUnavailable')}
                                                     </div>
                                                 </div>
 
@@ -214,7 +249,7 @@ export default function Friends() {
                                                     className="btn btn--ghost"
                                                     to={`/app/dm/${friend.id}`}
                                                 >
-                                                    Написать
+                                                    {t('common.write')}
                                                 </Link>
 
                                                 <button
@@ -222,7 +257,7 @@ export default function Friends() {
                                                     className="btn btn--ghost"
                                                     onClick={() => removeFriend(friend.id)}
                                                 >
-                                                    Удалить
+                                                    {t('friends.remove')}
                                                 </button>
                                             </div>
                                         ))}

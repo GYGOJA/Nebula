@@ -12,6 +12,7 @@ import {
     parseBirthDate,
     strengthLabel,
 } from '@/utils/auth'
+import { useI18n } from '@/i18n'
 
 const EMPTY_FORM = {
     username: '',
@@ -24,6 +25,7 @@ const EMPTY_FORM = {
 }
 
 function ProfileForm({ email, ticket }) {
+    const { t } = useI18n()
     const nav = useNavigate()
     const { register } = useAuth()
 
@@ -47,31 +49,32 @@ function ProfileForm({ email, ticket }) {
         const displayName = form.displayName.trim()
 
         if (!username || !form.password || !form.confirm) {
-            setError('Заполните все обязательные поля')
+            setError(t('validation.fillRequired'))
             return
         }
 
         if (!isUsername(username)) {
-            setError('Username: 3–16 символов, латиница, цифры и _')
+            setError(t('validation.username'))
             return
         }
 
         if (displayName.length > 64) {
-            setError('Отображаемое имя: не более 64 символов')
+            setError(t('validation.displayNameMax'))
             return
         }
 
         if (form.password.length < PASSWORD_MIN) {
-            setError(`Пароль должен содержать минимум ${PASSWORD_MIN} символов`)
+            setError(t('validation.passwordMin', { min: PASSWORD_MIN }))
             return
         }
 
         if (passwordMismatch) {
-            setError('Пароли не совпадают')
+            setError(t('validation.passwordMismatch'))
             return
         }
 
         const birth = parseBirthDate(form)
+
         if (birth.error) {
             setError(birth.error)
             return
@@ -84,7 +87,6 @@ function ProfileForm({ email, ticket }) {
                 email,
                 ticket,
                 username,
-                // По ТЗ отображаемое имя необязательно и по умолчанию = username.
                 displayName: displayName || username,
                 password: form.password,
                 ...(birth.value ? { birthDate: birth.value } : {}),
@@ -93,7 +95,7 @@ function ProfileForm({ email, ticket }) {
             pendingRegistration.clear()
             nav('/app', { replace: true })
         } catch (err) {
-            setError(err?.message || 'Не удалось создать аккаунт')
+            setError(err?.message || t('registerProfile.failed'))
         } finally {
             setLoading(false)
         }
@@ -101,26 +103,22 @@ function ProfileForm({ email, ticket }) {
 
     return (
         <section className="auth-card auth-card--profile">
-
             <Progress step={3} />
 
-            <h1 className="profile-title">Расскажите о себе</h1>
+            <h1 className="profile-title">{t('registerProfile.title')}</h1>
 
             <p className="profile-sub">
-                Почта{' '}
+                {t('registerProfile.emailPrefix')}{' '}
                 <strong className="auth-email">{maskEmail(email)}</strong>{' '}
-                подтверждена. Осталось заполнить профиль.
+                {t('registerProfile.emailSuffix')}
             </p>
 
             <form onSubmit={onSubmit} noValidate>
-
                 <div className="profile-grid">
-
                     <div>
                         <label className="auth-label" htmlFor="username">
-                            username:
+                            {t('registerProfile.usernameLabel')}
                         </label>
-
                         <input
                             id="username"
                             className="auth-input"
@@ -130,17 +128,15 @@ function ProfileForm({ email, ticket }) {
                             onChange={updateField('username')}
                             disabled={loading}
                         />
-
                         <small className="auth-hint">
-                            3-16 символов: латиница, цифры, _
+                            {t('registerProfile.usernameHint')}
                         </small>
                     </div>
 
                     <div>
                         <label className="auth-label" htmlFor="display-name">
-                            отображаемое имя:
+                            {t('registerProfile.displayNameLabel')}
                         </label>
-
                         <input
                             id="display-name"
                             className="auth-input"
@@ -151,15 +147,15 @@ function ProfileForm({ email, ticket }) {
                             onChange={updateField('displayName')}
                             disabled={loading}
                         />
-
-                        <small className="auth-hint">1-64 символа</small>
+                        <small className="auth-hint">
+                            {t('registerProfile.displayNameHint')}
+                        </small>
                     </div>
 
                     <div>
                         <label className="auth-label" htmlFor="profile-password">
-                            пароль:
+                            {t('auth.passwordLabel')}
                         </label>
-
                         <PasswordInput
                             variant="profile"
                             id="profile-password"
@@ -168,12 +164,12 @@ function ProfileForm({ email, ticket }) {
                             onChange={updateField('password')}
                             disabled={loading}
                         />
-
                         <small className="auth-hint">
-                            От {PASSWORD_MIN} символов. Надёжность:{' '}
-                            {strengthLabel(form.password)}
+                            {t('registerProfile.passwordHint', {
+                                min: PASSWORD_MIN,
+                                strength: strengthLabel(form.password),
+                            })}
                         </small>
-
                         <div className="strength">
                             {STRENGTH_STEPS.map((min) => (
                                 <i
@@ -190,9 +186,8 @@ function ProfileForm({ email, ticket }) {
 
                     <div>
                         <label className="auth-label" htmlFor="confirm-password">
-                            подтвердите пароль:
+                            {t('registerProfile.confirmLabel')}
                         </label>
-
                         <PasswordInput
                             variant="profile"
                             id="confirm-password"
@@ -202,7 +197,6 @@ function ProfileForm({ email, ticket }) {
                             onChange={updateField('confirm')}
                             disabled={loading}
                         />
-
                         <small
                             className={
                                 passwordMismatch
@@ -211,56 +205,51 @@ function ProfileForm({ email, ticket }) {
                             }
                         >
                             {passwordMismatch
-                                ? 'Пароли не совпадают'
-                                : 'Повторите пароль'}
+                                ? t('validation.passwordMismatch')
+                                : t('registerProfile.confirmHint')}
                         </small>
                     </div>
-
                 </div>
 
                 <label
                     className="auth-label profile-birth-label"
                     htmlFor="birth-day"
                 >
-                    дата рождения:
+                    {t('registerProfile.birthLabel')}
                 </label>
 
                 <div className="profile-birth">
-
                     <input
                         id="birth-day"
                         className="auth-input"
                         type="text"
                         inputMode="numeric"
                         maxLength={2}
-                        placeholder="день"
+                        placeholder={t('registerProfile.day')}
                         value={form.day}
                         onChange={updateField('day')}
                         disabled={loading}
                     />
-
                     <input
                         className="auth-input"
                         type="text"
-                        aria-label="месяц рождения"
-                        placeholder="месяц"
+                        aria-label={t('registerProfile.birthMonth')}
+                        placeholder={t('registerProfile.month')}
                         value={form.month}
                         onChange={updateField('month')}
                         disabled={loading}
                     />
-
                     <input
                         className="auth-input"
                         type="text"
                         inputMode="numeric"
-                        aria-label="год рождения"
+                        aria-label={t('registerProfile.birthYear')}
                         maxLength={4}
-                        placeholder="год"
+                        placeholder={t('registerProfile.year')}
                         value={form.year}
                         onChange={updateField('year')}
                         disabled={loading}
                     />
-
                 </div>
 
                 {error && (
@@ -277,19 +266,18 @@ function ProfileForm({ email, ticket }) {
                     type="submit"
                     disabled={loading || passwordMismatch}
                 >
-                    {loading ? 'Создание аккаунта…' : 'Зарегистрироваться'}
+                    {loading
+                        ? t('registerProfile.submitting')
+                        : t('registerProfile.submit')}
                 </button>
 
                 <div className="profile-foot">
                     <Progress step={3} style={{ margin: 0 }} />
-
                     <span className="muted">
-                        После регистрации откроется главная
+                        {t('registerProfile.afterNote')}
                     </span>
                 </div>
-
             </form>
-
         </section>
     )
 }

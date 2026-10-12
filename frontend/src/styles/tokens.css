@@ -1,5 +1,4 @@
 :root {
-    /* ===== Цвета ===== */
     --bg-page: #050505;
     --bg-card: #1a1a1a;
     --bg-input: #1c1c1e;
@@ -21,12 +20,10 @@
     --border-soft: #1a1a1a;
     --error: #d94b4b;
 
-    /* ===== Layout ===== */
     --rail-w: 72px;
     --sidebar-w: 248px;
     --rightbar-w: 280px;
 
-    /* ===== Радиусы ===== */
     --r-sm: 8px;
     --r-md: 11px;
     --r-lg: 15px;
@@ -34,13 +31,10 @@
     --r-2xl: 20px;
     --r-pill: 999px;
 
-    /* ===== Шрифт ===== */
     --font: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
     --font-mono: 'JetBrains Mono', ui-monospace, monospace;
 
-    /* ===== Тени ===== */
     --shadow-card: 0 6px 6px 6px rgba(0, 0, 0, 0.25);
 
-    /* ===== Переходы ===== */
     --t: 0.15s ease;
 }

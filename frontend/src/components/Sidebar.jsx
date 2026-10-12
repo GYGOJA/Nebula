@@ -3,17 +3,19 @@ import { useEffect, useState } from 'react'
 import Avatar from './Avatar'
 import { api } from '@/api'
 import { useAuth } from '@/context/AuthContext'
+import { useI18n } from '@/i18n'
 
 const NAV = [
-    { to: '/app', label: 'Лента', end: true },
-    { to: '/app/search', label: 'Поиск' },
-    { to: '/app/friends', label: 'Друзья' },
-    { to: '/app/dm', label: 'Сообщения' },
-    { to: '/app/profile', label: 'Профиль' },
-    { to: '/app/settings', label: 'Настройки' },
+    { to: '/app', labelKey: 'nav.feed', end: true },
+    { to: '/app/search', labelKey: 'nav.search' },
+    { to: '/app/friends', labelKey: 'nav.friends' },
+    { to: '/app/dm', labelKey: 'nav.messages' },
+    { to: '/app/profile', labelKey: 'nav.profile' },
+    { to: '/app/settings', labelKey: 'nav.settings' },
 ]
 
 export default function Sidebar() {
+    const { t } = useI18n()
     const navigate = useNavigate()
     const { logout } = useAuth()
     const [friends, setFriends] = useState([])
@@ -40,7 +42,7 @@ export default function Sidebar() {
 
     return (
         <aside className="sidebar">
-            <h2 className="sidebar__title">Главная</h2>
+            <h2 className="sidebar__title">{t('nav.home')}</h2>
 
             <nav className="sidebar__nav">
                 {NAV.map((item) => (
@@ -54,33 +56,30 @@ export default function Sidebar() {
                             }`
                         }
                     >
-                        <span
-                            className="icon-placeholder"
-                            aria-hidden="true"
-                        />
-                        <span>{item.label}</span>
+                        <span className="icon-placeholder" aria-hidden="true" />
+                        <span>{t(item.labelKey)}</span>
                     </NavLink>
                 ))}
             </nav>
 
             <div className="sidebar__section-label">
-                <span>Личные сообщения</span>
+                <span>{t('nav.directMessages')}</span>
 
                 <button
                     type="button"
                     className="icon-placeholder icon-placeholder--button"
-                    title="Новое сообщение"
-                    aria-label="Новое сообщение"
+                    title={t('nav.newMessage')}
+                    aria-label={t('nav.newMessage')}
                     onClick={() => navigate('/app/dm')}
                 />
             </div>
 
             {loading && (
-                <p className="sidebar__empty">Загрузка…</p>
+                <p className="sidebar__empty">{t('common.loading')}</p>
             )}
 
             {!loading && friends.length === 0 && (
-                <p className="sidebar__empty">Пока никого нет</p>
+                <p className="sidebar__empty">{t('common.noOneYet')}</p>
             )}
 
             <ul>
@@ -90,19 +89,24 @@ export default function Sidebar() {
                         className="sidebar__dm"
                         onClick={() => navigate(`/app/dm/${friend.id}`)}
                     >
-                        <Avatar label={friend.avatar} size={32} />
+                        <Avatar
+                            src={friend.avatarUrl || friend.avatar}
+                            label={friend.displayName || friend.name}
+                            size={32}
+                        />
+                        <span>{friend.displayName || friend.name}</span>
 
-                        <span>{friend.name}</span>
-
-                        <span
-                            className={`sidebar__dm-status sidebar__dm-status--${friend.status}`}
-                        >
-                            {friend.status === 'voice'
-                                ? 'в голосе'
-                                : friend.status === 'online'
-                                    ? 'в сети'
-                                    : 'не в сети'}
-                        </span>
+                        {friend.status && (
+                            <span
+                                className={`sidebar__dm-status sidebar__dm-status--${friend.status}`}
+                            >
+                                {friend.status === 'voice'
+                                    ? t('status.voice')
+                                    : friend.status === 'online'
+                                        ? t('status.online')
+                                        : t('status.offline')}
+                            </span>
+                        )}
                     </li>
                 ))}
             </ul>
@@ -112,7 +116,7 @@ export default function Sidebar() {
                 className="sidebar__logout"
                 onClick={logout}
             >
-                Выйти
+                {t('nav.logout')}
             </button>
         </aside>
     )

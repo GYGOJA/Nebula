@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import NavigationRail from '@/components/NavigationRail'
 import Sidebar from '@/components/Sidebar'
@@ -9,8 +9,10 @@ import EmptyState from '@/components/EmptyState'
 import MessageItem from '@/components/MessageItem'
 import MessageComposer from '@/components/MessageComposer'
 import { api } from '@/api'
+import { useI18n } from '@/i18n'
 
 export function DmList() {
+    const { t } = useI18n()
     const [conversations, setConversations] = useState([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState('')
@@ -23,7 +25,7 @@ export function DmList() {
             const result = await api.getDmConversations()
             setConversations(Array.isArray(result) ? result : [])
         } catch (err) {
-            setError(err?.message || 'Не удалось загрузить диалоги')
+            setError(err?.message || t('dm.loadFailed'))
         } finally {
             setLoading(false)
         }
@@ -40,9 +42,9 @@ export function DmList() {
 
             <main className="main">
                 <div className="main__content">
-                    <PageHeader title="Личные сообщения" />
+                    <PageHeader title={t('nav.directMessages')} />
 
-                    {loading && <p className="muted">Загрузка…</p>}
+                    {loading && <p className="muted">{t('common.loading')}</p>}
 
                     {!loading && error && (
                         <div>
@@ -52,15 +54,15 @@ export function DmList() {
                                 className="btn btn--ghost"
                                 onClick={load}
                             >
-                                Повторить
+                                {t('common.retry')}
                             </button>
                         </div>
                     )}
 
                     {!loading && !error && conversations.length === 0 && (
                         <EmptyState
-                            title="Диалогов пока нет"
-                            description="Когда появятся личные переписки, они будут отображаться здесь."
+                            title={t('dm.emptyTitle')}
+                            description={t('dm.emptyDesc')}
                         />
                     )}
 
@@ -83,7 +85,7 @@ export function DmList() {
                                             {conversation.displayName || conversation.name}
                                         </div>
                                         <div className="friend-row__status">
-                                            {conversation.last?.text || 'Нет сообщений'}
+                                            {conversation.last?.text || t('dm.noMessages')}
                                         </div>
                                     </div>
                                 </Link>
@@ -98,32 +100,48 @@ export function DmList() {
     )
 }
 
+const POLL_MS = 4000
+
+const formatTime = (message) => {
+    if (!message?.createdAt) return message?.time || ''
+
+    const date = new Date(message.createdAt)
+
+    if (Number.isNaN(date.getTime())) return message.time || ''
+
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+}
+
+const normalize = (message) => ({ ...message, time: formatTime(message) })
+
 export function DmChat() {
+    const { t } = useI18n()
     const { userId } = useParams()
     const [messages, setMessages] = useState([])
-    const [conversation, setConversation] = useState(null)
+    const [peer, setPeer] = useState(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState('')
     const [sendError, setSendError] = useState('')
+    const bottomRef = useRef(null)
+    const lastIdRef = useRef(null)
 
     const load = useCallback(async () => {
         setLoading(true)
         setError('')
+        setMessages([])
+        setPeer(null)
+        lastIdRef.current = null
 
         try {
-            const [allConversations, result] = await Promise.all([
-                api.getDmConversations(),
+            const [peerInfo, result] = await Promise.all([
+                api.getDmPeer(userId).catch(() => null),
                 api.getDmMessages(userId),
             ])
 
-            setConversation(
-                allConversations.find(
-                    (item) => String(item.userId) === String(userId)
-                ) || null
-            )
-            setMessages(Array.isArray(result) ? result : [])
+            setPeer(peerInfo)
+            setMessages(Array.isArray(result) ? result.map(normalize) : [])
         } catch (err) {
-            setError(err?.message || 'Не удалось загрузить переписку')
+            setError(err?.message || t('dm.chatLoadFailed'))
         } finally {
             setLoading(false)
         }
@@ -133,17 +151,66 @@ export function DmChat() {
         load()
     }, [load])
 
+    // Пока нет WebSocket, подтягиваем новые сообщения периодическим опросом.
+    useEffect(() => {
+        if (loading || error) return undefined
+
+        let alive = true
+
+        const timer = setInterval(async () => {
+            try {
+                const result = await api.getDmMessages(userId)
+
+                if (!alive || !Array.isArray(result)) return
+
+                setMessages((previous) => {
+                    const lastNew = result[result.length - 1]?.id
+                    const lastOld = previous[previous.length - 1]?.id
+
+                    if (lastNew === lastOld && result.length === previous.length) {
+                        return previous
+                    }
+
+                    return result.map(normalize)
+                })
+            } catch {
+                // временная ошибка сети: попробуем в следующий тик
+            }
+        }, POLL_MS)
+
+        return () => {
+            alive = false
+            clearInterval(timer)
+        }
+    }, [userId, loading, error])
+
+    useEffect(() => {
+        const lastId = messages[messages.length - 1]?.id
+
+        if (lastId !== lastIdRef.current) {
+            lastIdRef.current = lastId
+            bottomRef.current?.scrollIntoView({ block: 'end' })
+        }
+    }, [messages])
+
     const send = async (text) => {
         setSendError('')
 
         try {
             const message = await api.sendDm(userId, text)
-            setMessages((previous) => [...previous, message])
+
+            setMessages((previous) =>
+                previous.some((item) => item.id === message.id)
+                    ? previous
+                    : [...previous, normalize(message)]
+            )
         } catch (err) {
-            setSendError(err?.message || 'Не удалось отправить сообщение')
+            setSendError(err?.message || t('dm.sendFailed'))
             throw err
         }
     }
+
+    const peerName = peer?.displayName || peer?.name
 
     return (
         <div className="app-layout">
@@ -152,28 +219,28 @@ export function DmChat() {
 
             <main className="chat">
                 <header className="chat__header">
-                    <Avatar
-                        src={conversation?.avatarUrl || conversation?.avatar}
-                        label={conversation?.name}
-                        size={40}
-                    />
+                    <Link to={`/app/users/${userId}`}>
+                        <Avatar
+                            src={peer?.avatarUrl || peer?.avatar}
+                            label={peerName}
+                            size={40}
+                        />
+                    </Link>
 
                     <div className="chat__title-wrap">
                         <div className="chat__title">
-                            {conversation?.displayName ||
-                                conversation?.name ||
-                                'Личные сообщения'}
+                            <Link to={`/app/users/${userId}`}>
+                                {peerName || t('nav.directMessages')}
+                            </Link>
                         </div>
-                        <div className="chat__sub">
-                            {conversation?.status === 'online'
-                                ? 'В сети'
-                                : 'Статус недоступен'}
-                        </div>
+                        {peer?.username && (
+                            <div className="chat__sub">@{peer.username}</div>
+                        )}
                     </div>
                 </header>
 
                 <div className="chat__messages">
-                    {loading && <p className="muted">Загрузка…</p>}
+                    {loading && <p className="muted">{t('common.loading')}</p>}
 
                     {!loading && error && (
                         <div>
@@ -183,15 +250,15 @@ export function DmChat() {
                                 className="btn btn--ghost"
                                 onClick={load}
                             >
-                                Повторить
+                                {t('common.retry')}
                             </button>
                         </div>
                     )}
 
                     {!loading && !error && messages.length === 0 && (
                         <EmptyState
-                            title="Сообщений пока нет"
-                            description="Отправьте первое сообщение, чтобы начать переписку."
+                            title={t('dm.chatEmptyTitle')}
+                            description={t('dm.chatEmptyDesc')}
                         />
                     )}
 
@@ -206,10 +273,12 @@ export function DmChat() {
                     {sendError && (
                         <p className="auth-inline-error">{sendError}</p>
                     )}
+
+                    <div ref={bottomRef} />
                 </div>
 
                 <MessageComposer
-                    placeholder="Написать сообщение"
+                    placeholder={t('messages.placeholder')}
                     onSend={send}
                     disabled={loading || !!error}
                 />

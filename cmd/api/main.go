@@ -35,8 +35,9 @@ func main() {
 	defer rdb.Close()
 
 	tokenManager := auth.NewTokenManager(cfg.JWT.Secret, 15*time.Minute)
+	userRepository := repository.NewUserRepository(db)
 	authService := service.NewAuthService(
-		repository.NewUserRepository(db),
+		userRepository,
 		repository.NewCodeRepository(rdb),
 		repository.NewRefreshTokenRepository(db),
 		mail.NewMailer(cfg.Verification.From, cfg.Verification.Password),
@@ -44,13 +45,15 @@ func main() {
 		30*24*time.Hour,
 	)
 
+	friendshipService := service.NewFriendshipService(repository.NewFriendshipRepository(db), userRepository)
+
 	port := cfg.Server.Port
 	if port == "" {
 		port = "8080"
 	}
 	server := &http.Server{
 		Addr:              ":" + port,
-		Handler:           httpapi.New(authService).Handler(),
+		Handler:           httpapi.New(authService, friendshipService, tokenManager, db).Handler(),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 	log.Printf("Nebula API started on :%s", port)

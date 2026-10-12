@@ -1,0 +1,9 @@
+uploads/
+.idea
+.gitignore
+bin/
+dist/
+*.log
+vendor
+node_modules/
+.env

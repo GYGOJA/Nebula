@@ -1,12 +1,18 @@
 package httpapi
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/TheLonger011/Nebula/internal/auth"
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/TheLonger011/Nebula/internal/models"
 	"github.com/TheLonger011/Nebula/internal/repository"
@@ -14,11 +20,14 @@ import (
 )
 
 type Server struct {
-	auth *service.AuthService
+	auth    *service.AuthService
+	friends *service.FriendshipService
+	tokens  *auth.TokenManager
+	db      *pgxpool.Pool
 }
 
-func New(authService *service.AuthService) *Server {
-	return &Server{auth: authService}
+func New(authService *service.AuthService, friendshipService *service.FriendshipService, tokens *auth.TokenManager, db *pgxpool.Pool) *Server {
+	return &Server{auth: authService, friends: friendshipService, tokens: tokens, db: db}
 }
 
 func (s *Server) Handler() http.Handler {
@@ -27,6 +36,17 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("/api/auth/verify", s.verifyCode)
 	mux.HandleFunc("/api/auth/profile", s.register)
 	mux.HandleFunc("/api/auth/login", s.login)
+	mux.Handle("/api/friends", s.requireAuth(http.HandlerFunc(s.friendRoutes)))
+	mux.Handle("/api/friends/", s.requireAuth(http.HandlerFunc(s.friendRoutes)))
+	mux.Handle("/api/me", s.requireAuth(http.HandlerFunc(s.profileRoutes)))
+	mux.Handle("/api/me/avatar", s.requireAuth(http.HandlerFunc(s.meAvatar)))
+	mux.HandleFunc("/api/avatars/", s.serveAvatar)
+	mux.Handle("/api/users/", s.requireAuth(http.HandlerFunc(s.userRoutes)))
+	mux.Handle("/api/dm", s.requireAuth(http.HandlerFunc(s.dmRoutes)))
+	mux.Handle("/api/dm/", s.requireAuth(http.HandlerFunc(s.dmRoutes)))
+	mux.Handle("/api/spaces", s.requireAuth(http.HandlerFunc(s.emptyList)))
+	mux.Handle("/api/channels", s.requireAuth(http.HandlerFunc(s.emptyList)))
+	mux.Handle("/api/voice", s.requireAuth(http.HandlerFunc(s.emptyList)))
 	return s.cors(mux)
 }
 
@@ -180,8 +200,140 @@ func (s *Server) writeError(w http.ResponseWriter, err error) {
 		status, message = http.StatusTooManyRequests, "Повторно запросить код можно через минуту"
 	case errors.Is(err, service.ErrInvalidCredentials):
 		status, message = http.StatusUnauthorized, "Неверные данные для входа"
+	case errors.Is(err, service.ErrSelfFriendRequest):
+		status, message = http.StatusBadRequest, "Нельзя добавить самого себя"
+	case errors.Is(err, service.ErrUserNotFound):
+		status, message = http.StatusNotFound, "Пользователь не найден"
+	case errors.Is(err, repository.ErrFriendshipExists):
+		status, message = http.StatusConflict, "Запрос уже существует или вы уже друзья"
+	case errors.Is(err, repository.ErrFriendshipNotFound):
+		status, message = http.StatusNotFound, "Запрос не найден"
+	case errors.Is(err, repository.ErrNotFriend):
+		status, message = http.StatusNotFound, "Пользователь не находится в списке друзей"
+	}
+	if status == http.StatusInternalServerError {
+		log.Printf("internal error: %v", err)
 	}
 	writeJSON(w, status, map[string]string{"error": message})
+}
+
+func (s *Server) emptyList(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "Маршрут пока не реализован"})
+		return
+	}
+	writeJSON(w, http.StatusOK, []any{})
+}
+
+type userIDKey struct{}
+
+func (s *Server) requireAuth(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		header := strings.TrimSpace(r.Header.Get("Authorization"))
+		parts := strings.SplitN(header, " ", 2)
+		if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") {
+			writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "Требуется авторизация"})
+			return
+		}
+		id, err := s.tokens.ParseAccess(strings.TrimSpace(parts[1]))
+		if err != nil {
+			writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "Сессия истекла. Войдите снова"})
+			return
+		}
+		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), userIDKey{}, id)))
+	})
+}
+
+func currentUserID(r *http.Request) uuid.UUID {
+	id, _ := r.Context().Value(userIDKey{}).(uuid.UUID)
+	return id
+}
+
+func (s *Server) friendRoutes(w http.ResponseWriter, r *http.Request) {
+	path := strings.Trim(strings.TrimPrefix(r.URL.Path, "/api/friends"), "/")
+	userID := currentUserID(r)
+	switch {
+	case path == "" && r.Method == http.MethodGet:
+		friends, err := s.friends.Friends(r.Context(), userID)
+		if err != nil {
+			s.writeError(w, err)
+			return
+		}
+		result := make([]map[string]any, 0, len(friends))
+		for _, user := range friends {
+			result = append(result, map[string]any{"id": user.ID, "userId": user.ID, "username": user.Username, "name": user.DisplayName, "displayName": user.DisplayName, "avatar": user.AvatarURL, "avatarUrl": user.AvatarURL, "bio": user.Bio, "lastSeenAt": user.LastSeenAt})
+		}
+		writeJSON(w, http.StatusOK, result)
+	case path == "requests" && r.Method == http.MethodGet:
+		incoming, outgoing, err := s.friends.Requests(r.Context(), userID)
+		if err != nil {
+			s.writeError(w, err)
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]any{"incoming": friendRequestDTOs(incoming), "outgoing": friendRequestDTOs(outgoing)})
+	case path == "requests" && r.Method == http.MethodPost:
+		var input struct {
+			Username string `json:"username"`
+		}
+		if !decode(w, r, &input) {
+			return
+		}
+		request, err := s.friends.SendRequest(r.Context(), userID, input.Username)
+		if err != nil {
+			s.writeError(w, err)
+			return
+		}
+		writeJSON(w, http.StatusCreated, map[string]any{"id": request.ID, "status": request.Status})
+	case strings.HasPrefix(path, "requests/"):
+		parts := strings.Split(path, "/")
+		if len(parts) != 3 {
+			http.NotFound(w, r)
+			return
+		}
+		requestID, err := uuid.Parse(parts[1])
+		if err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Некорректный ID запроса"})
+			return
+		}
+		switch {
+		case parts[2] == "accept" && r.Method == http.MethodPost:
+			err = s.friends.Accept(r.Context(), requestID, userID)
+		case parts[2] == "decline" && r.Method == http.MethodPost:
+			err = s.friends.Decline(r.Context(), requestID, userID)
+		case parts[2] == "cancel" && r.Method == http.MethodDelete:
+			err = s.friends.Cancel(r.Context(), requestID, userID)
+		default:
+			writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "Метод не поддерживается"})
+			return
+		}
+		if err != nil {
+			s.writeError(w, err)
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+	case path != "" && r.Method == http.MethodDelete:
+		friendID, err := uuid.Parse(path)
+		if err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Некорректный ID пользователя"})
+			return
+		}
+		if err := s.friends.Remove(r.Context(), userID, friendID); err != nil {
+			s.writeError(w, err)
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+	default:
+		writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "Метод не поддерживается"})
+	}
+}
+
+func friendRequestDTOs(entries []repository.FriendshipEntry) []map[string]any {
+	result := make([]map[string]any, 0, len(entries))
+	for _, entry := range entries {
+		user := entry.User
+		result = append(result, map[string]any{"id": entry.Friendship.ID, "userId": user.ID, "username": user.Username, "name": user.DisplayName, "displayName": user.DisplayName, "avatar": user.AvatarURL, "avatarUrl": user.AvatarURL, "status": entry.Friendship.Status, "createdAt": entry.Friendship.CreatedAt})
+	}
+	return result
 }
 
 func (s *Server) cors(next http.Handler) http.Handler {

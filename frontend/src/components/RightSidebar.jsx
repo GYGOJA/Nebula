@@ -2,8 +2,10 @@ import { useEffect, useState } from 'react'
 import { api } from '@/api'
 import Avatar from './Avatar'
 import EmptyState from './EmptyState'
+import { useI18n } from '@/i18n'
 
 export default function RightSidebar({ roomId }) {
+    const { t } = useI18n()
     const [tab, setTab] = useState('participants')
     const [room, setRoom] = useState(null)
     const [participants, setParticipants] = useState([])
@@ -31,7 +33,7 @@ export default function RightSidebar({ roomId }) {
                 if (active) {
                     setRoom(null)
                     setParticipants([])
-                    setError(err?.message || 'Не удалось загрузить участников')
+                    setError(err?.message || t('rightbar.loadFailed'))
                 }
             } finally {
                 if (active) setLoading(false)
@@ -57,7 +59,7 @@ export default function RightSidebar({ roomId }) {
                     }`}
                     onClick={() => setTab('participants')}
                 >
-                    Участники
+                    {t('rightbar.participants')}
                 </button>
 
                 <button
@@ -69,7 +71,7 @@ export default function RightSidebar({ roomId }) {
                     }`}
                     onClick={() => setTab('threads')}
                 >
-                    Ветки
+                    {t('rightbar.threads')}
                 </button>
 
                 <button
@@ -81,11 +83,11 @@ export default function RightSidebar({ roomId }) {
                     }`}
                     onClick={() => setTab('files')}
                 >
-                    Файлы
+                    {t('rightbar.files')}
                 </button>
             </div>
 
-            {loading && <p className="muted">Загрузка…</p>}
+            {loading && <p className="muted">{t('common.loading')}</p>}
 
             {!loading && error && (
                 <div className="rightbar__content">
@@ -97,21 +99,21 @@ export default function RightSidebar({ roomId }) {
                 <div className="rightbar__content">
                     {room && (
                         <div className="rightbar__section-title">
-                            В голосе — {participants.length}
+                            {t('rightbar.inVoice', { count: participants.length })}
                         </div>
                     )}
 
                     {!room && (
                         <EmptyState
-                            title="Нет активной комнаты"
-                            description="Участники голосовых комнат появятся здесь после подключения."
+                            title={t('rightbar.noRoomTitle')}
+                            description={t('rightbar.noRoomDesc')}
                         />
                     )}
 
                     {room && participants.length === 0 && (
                         <EmptyState
-                            title="Пока никого нет"
-                            description="Когда участники подключатся к комнате, они появятся здесь."
+                            title={t('common.noOneYet')}
+                            description={t('rightbar.emptyRoomDesc')}
                         />
                     )}
 
@@ -132,8 +134,9 @@ export default function RightSidebar({ roomId }) {
                                             label={user.name}
                                             size={36}
                                         />
+
                                         <span className="rightbar__user-name">
-                                            {user.displayName || user.name || 'Пользователь'}
+                                            {user.displayName || user.name || t('common.user')}
                                         </span>
                                     </li>
                                 )
@@ -145,15 +148,15 @@ export default function RightSidebar({ roomId }) {
 
             {!loading && !error && tab === 'threads' && (
                 <EmptyState
-                    title="Веток пока нет"
-                    description="Ответы на сообщения будут отображаться здесь."
+                    title={t('rightbar.noThreadsTitle')}
+                    description={t('rightbar.noThreadsDesc')}
                 />
             )}
 
             {!loading && !error && tab === 'files' && (
                 <EmptyState
-                    title="Файлов пока нет"
-                    description="Прикреплённые к сообщениям файлы появятся здесь."
+                    title={t('rightbar.noFilesTitle')}
+                    description={t('rightbar.noFilesDesc')}
                 />
             )}
         </aside>

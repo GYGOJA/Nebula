@@ -1,44 +1,37 @@
+import { useI18n } from '@/i18n'
+import { assetUrl } from '@/api/client'
+
 export default function MessageItem({ message, author }) {
+    const { t } = useI18n()
     const isSelf = message.self || message.authorId === 'me'
-    const name = author?.name || author?.displayName || 'Неизвестный'
+    const name = author?.name || author?.displayName || t('common.unknownAuthor')
     const avatar = author?.avatar || ''
 
     return (
         <div className={`message ${isSelf ? 'message--self' : ''}`}>
             <div className="message__avatar">
                 {avatar ? (
-                    <img src={avatar} alt="" />
+                    <img src={assetUrl(avatar)} alt="" />
                 ) : (
-                    <span
-                        className="icon-placeholder"
-                        aria-hidden="true"
-                    />
+                    <span className="icon-placeholder" aria-hidden="true" />
                 )}
             </div>
 
             <div className="message__body">
                 <div className="message__head">
-                    <span className="message__author">
-                        {name}
-                    </span>
+                    <span className="message__author">{name}</span>
 
                     {message.time && (
-                        <span className="message__time">
-                            {message.time}
-                        </span>
+                        <span className="message__time">{message.time}</span>
                     )}
                 </div>
 
                 {message.text && (
-                    <div className="message__text">
-                        {message.text}
-                    </div>
+                    <div className="message__text">{message.text}</div>
                 )}
 
                 {message.code && (
-                    <pre className="code">
-                        {message.code}
-                    </pre>
+                    <pre className="code">{message.code}</pre>
                 )}
 
                 {message.reactions?.length > 0 && (
@@ -61,7 +54,7 @@ export default function MessageItem({ message, author }) {
 
                 {message.thread && (
                     <span className="thread-link">
-                        {message.thread.replies} ответа в ветке
+                        {t('messages.replies', { count: message.thread.replies })}
                     </span>
                 )}
             </div>

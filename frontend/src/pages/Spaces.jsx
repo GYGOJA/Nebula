@@ -6,8 +6,10 @@ import RightSidebar from '@/components/RightSidebar'
 import PageHeader from '@/components/PageHeader'
 import EmptyState from '@/components/EmptyState'
 import { api } from '@/api'
+import { useI18n } from '@/i18n'
 
 export function Spaces() {
+    const { t } = useI18n()
     const [spaces, setSpaces] = useState([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState('')
@@ -20,7 +22,7 @@ export function Spaces() {
             const result = await api.getSpaces()
             setSpaces(Array.isArray(result) ? result : [])
         } catch (err) {
-            setError(err?.message || 'Не удалось загрузить пространства')
+            setError(err?.message || t('spaces.loadFailed'))
         } finally {
             setLoading(false)
         }
@@ -37,9 +39,9 @@ export function Spaces() {
 
             <main className="main">
                 <div className="main__content">
-                    <PageHeader title="Пространства" />
+                    <PageHeader title={t('nav.spaces')} />
 
-                    {loading && <p className="muted">Загрузка…</p>}
+                    {loading && <p className="muted">{t('common.loading')}</p>}
 
                     {!loading && error && (
                         <>
@@ -49,21 +51,21 @@ export function Spaces() {
                                 className="btn btn--ghost"
                                 onClick={load}
                             >
-                                Повторить
+                                {t('common.retry')}
                             </button>
                         </>
                     )}
 
                     {!loading && !error && spaces.length === 0 && (
                         <EmptyState
-                            title="Пространств пока нет"
-                            description="Создайте пространство или присоединитесь по приглашению."
+                            title={t('spaces.emptyTitle')}
+                            description={t('spaces.emptyDesc')}
                             action={
                                 <Link
                                     to="/app/spaces/new"
                                     className="btn btn--primary"
                                 >
-                                    Создать пространство
+                                    {t('nav.createSpace')}
                                 </Link>
                             }
                         />
@@ -100,6 +102,7 @@ export function Spaces() {
 }
 
 export function CreateSpace() {
+    const { t } = useI18n()
     const navigate = useNavigate()
     const [name, setName] = useState('')
     const [description, setDescription] = useState('')
@@ -119,7 +122,7 @@ export function CreateSpace() {
 
             navigate(`/app/spaces/${space.id}`)
         } catch (err) {
-            setError(err?.message || 'Не удалось создать пространство')
+            setError(err?.message || t('spaces.createFailed'))
         } finally {
             setLoading(false)
         }
@@ -132,13 +135,11 @@ export function CreateSpace() {
 
             <main className="main">
                 <div className="main__content">
-                    <PageHeader title="Создать пространство" />
+                    <PageHeader title={t('nav.createSpace')} />
 
                     <form className="settings-form" onSubmit={submit}>
                         <div className="settings-form__field">
-                            <label htmlFor="space-name">
-                                Название
-                            </label>
+                            <label htmlFor="space-name">{t('spaces.name')}</label>
                             <input
                                 id="space-name"
                                 className="input"
@@ -150,9 +151,7 @@ export function CreateSpace() {
                         </div>
 
                         <div className="settings-form__field">
-                            <label htmlFor="space-description">
-                                Описание
-                            </label>
+                            <label htmlFor="space-description">{t('spaces.description')}</label>
                             <textarea
                                 id="space-description"
                                 className="input"
@@ -172,7 +171,7 @@ export function CreateSpace() {
                             className="btn btn--primary"
                             disabled={loading || !name.trim()}
                         >
-                            {loading ? 'Создание…' : 'Создать'}
+                            {loading ? t('common.creating') : t('spaces.create')}
                         </button>
                     </form>
                 </div>
@@ -184,6 +183,7 @@ export function CreateSpace() {
 }
 
 export function SpaceDetails() {
+    const { t } = useI18n()
     const { id } = useParams()
     const [space, setSpace] = useState(null)
     const [loading, setLoading] = useState(true)
@@ -198,7 +198,7 @@ export function SpaceDetails() {
             setSpace(result)
         } catch (err) {
             setSpace(null)
-            setError(err?.message || 'Не удалось загрузить пространство')
+            setError(err?.message || t('spaces.loadOneFailed'))
         } finally {
             setLoading(false)
         }
@@ -215,7 +215,7 @@ export function SpaceDetails() {
 
             <main className="main">
                 <div className="main__content">
-                    {loading && <p className="muted">Загрузка…</p>}
+                    {loading && <p className="muted">{t('common.loading')}</p>}
 
                     {!loading && error && (
                         <>
@@ -225,7 +225,7 @@ export function SpaceDetails() {
                                 className="btn btn--ghost"
                                 onClick={load}
                             >
-                                Повторить
+                                {t('common.retry')}
                             </button>
                         </>
                     )}
@@ -239,9 +239,7 @@ export function SpaceDetails() {
                             )}
 
                             <section className="spaces-section">
-                                <h2 className="section-title">
-                                    Текстовые каналы
-                                </h2>
+                                <h2 className="section-title">{t('spaces.textChannels')}</h2>
 
                                 {space.channels?.length ? (
                                     <div className="space-channel-list">
@@ -251,26 +249,21 @@ export function SpaceDetails() {
                                                 className="space-channel"
                                                 to={`/app/channels/${channel.id}`}
                                             >
-                                                <span
-                                                    className="icon-placeholder"
-                                                    aria-hidden="true"
-                                                />
+                                                <span className="icon-placeholder" aria-hidden="true" />
                                                 <span>{channel.name}</span>
                                             </Link>
                                         ))}
                                     </div>
                                 ) : (
                                     <EmptyState
-                                        title="Каналов пока нет"
-                                        description="Текстовые каналы появятся после их создания."
+                                        title={t('home.noChannelsTitle')}
+                                        description={t('spaces.noChannelsDesc')}
                                     />
                                 )}
                             </section>
 
                             <section className="spaces-section">
-                                <h2 className="section-title">
-                                    Голосовые комнаты
-                                </h2>
+                                <h2 className="section-title">{t('spaces.voiceRooms')}</h2>
 
                                 {space.voiceRooms?.length ? (
                                     <div className="space-channel-list">
@@ -280,18 +273,15 @@ export function SpaceDetails() {
                                                 className="space-channel"
                                                 to={`/app/voice/${room.id}`}
                                             >
-                                                <span
-                                                    className="icon-placeholder"
-                                                    aria-hidden="true"
-                                                />
+                                                <span className="icon-placeholder" aria-hidden="true" />
                                                 <span>{room.name}</span>
                                             </Link>
                                         ))}
                                     </div>
                                 ) : (
                                     <EmptyState
-                                        title="Голосовых комнат пока нет"
-                                        description="Комнаты появятся после создания на сервере."
+                                        title={t('spaces.noVoiceTitle')}
+                                        description={t('spaces.noVoiceDesc')}
                                     />
                                 )}
                             </section>

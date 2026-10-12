@@ -1,10 +1,13 @@
 import { useState } from 'react'
+import { useI18n } from '@/i18n'
 
 export default function MessageComposer({
-                                            placeholder = 'Написать сообщение',
+                                            placeholder,
                                             onSend,
                                             disabled = false,
                                         }) {
+    const { t } = useI18n()
+    const resolvedPlaceholder = placeholder ?? t('messages.placeholder')
     const [text, setText] = useState('')
     const [sending, setSending] = useState(false)
 
@@ -18,6 +21,7 @@ export default function MessageComposer({
         try {
             await onSend(value)
             setText('')
+        } catch {
         } finally {
             setSending(false)
         }
@@ -35,13 +39,13 @@ export default function MessageComposer({
             <div className="chat__composer-inner">
                 <textarea
                     className="chat__composer-input"
-                    placeholder={placeholder}
+                    placeholder={resolvedPlaceholder}
                     value={text}
                     disabled={disabled || sending}
                     onChange={(event) => setText(event.target.value)}
                     onKeyDown={handleKeyDown}
                     rows={1}
-                    aria-label={placeholder}
+                    aria-label={resolvedPlaceholder}
                 />
 
                 <button
@@ -49,13 +53,10 @@ export default function MessageComposer({
                     className="chat__composer-send"
                     onClick={handleSend}
                     disabled={disabled || sending || !text.trim()}
-                    title="Отправить"
-                    aria-label="Отправить сообщение"
+                    title={t('messages.send')}
+                    aria-label={t('messages.sendLabel')}
                 >
-                    <span
-                        className="icon-placeholder"
-                        aria-hidden="true"
-                    />
+                    <span className="icon-placeholder" aria-hidden="true" />
                 </button>
             </div>
         </div>
