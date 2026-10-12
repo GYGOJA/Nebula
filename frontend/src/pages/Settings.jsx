@@ -4,9 +4,43 @@ import Sidebar from '@/components/Sidebar'
 import RightSidebar from '@/components/RightSidebar'
 import PageHeader from '@/components/PageHeader'
 import { api } from '@/api'
+import { getLanguage, useI18n } from '@/i18n'
+
+const DEFAULT_SETTINGS = {
+    theme: 'dark',
+    language: 'ru',
+    notifications: {
+        desktop: true,
+        sounds: true,
+        mentions: true,
+    },
+    privacy: {
+        dmFromEveryone: true,
+        showOnlineStatus: true,
+    },
+}
+
+function readSavedPreferences() {
+    try {
+        return JSON.parse(localStorage.getItem('nebula_settings') || '{}')
+    } catch {
+        return {}
+    }
+}
+
+function resolveTheme(theme) {
+    if (theme !== 'system') {
+        return theme === 'light' ? 'light' : 'dark'
+    }
+
+    return window.matchMedia('(prefers-color-scheme: light)').matches
+        ? 'light'
+        : 'dark'
+}
 
 export default function Settings() {
-    const [settings, setSettings] = useState(null)
+    const { t, language, languages, setLanguage } = useI18n()
+    const [settings, setSettings] = useState(DEFAULT_SETTINGS)
     const [passwords, setPasswords] = useState({
         current: '',
         next: '',
@@ -14,6 +48,7 @@ export default function Settings() {
     })
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
+    const [passwordSaving, setPasswordSaving] = useState(false)
     const [error, setError] = useState('')
     const [notice, setNotice] = useState('')
 
@@ -23,26 +58,85 @@ export default function Settings() {
 
         try {
             const result = await api.getSettings()
-            setSettings(result)
+            const savedPreferences = readSavedPreferences()
+
+            const merged = {
+                ...DEFAULT_SETTINGS,
+                ...(result || {}),
+                ...savedPreferences,
+                notifications: {
+                    ...DEFAULT_SETTINGS.notifications,
+                    ...(result?.notifications || {}),
+                    ...(savedPreferences.notifications || {}),
+                },
+                privacy: {
+                    ...DEFAULT_SETTINGS.privacy,
+                    ...(result?.privacy || {}),
+                    ...(savedPreferences.privacy || {}),
+                },
+                theme: savedPreferences.theme || result?.theme || 'dark',
+                language: getLanguage(),
+            }
+
+            setSettings(merged)
+            document.documentElement.dataset.theme = resolveTheme(merged.theme)
         } catch (err) {
-            setError(err?.message || 'Не удалось загрузить настройки')
+            setError(err?.message || t('settings.loadFailed'))
         } finally {
             setLoading(false)
         }
-    }, [])
+    }, [t])
 
     useEffect(() => {
         load()
     }, [load])
 
+    const persistLocalPreferences = (nextSettings) => {
+        try {
+            localStorage.setItem(
+                'nebula_settings',
+                JSON.stringify(nextSettings)
+            )
+        } catch {
+            setError('Не удалось сохранить настройки в браузере')
+        }
+    }
+
     const updateSetting = (group, key, value) => {
-        setSettings((previous) => ({
-            ...previous,
-            [group]: {
-                ...previous[group],
+        setSettings((previous) => {
+            const next = {
+                ...previous,
+                [group]: {
+                    ...(previous[group] || {}),
+                    [key]: value,
+                },
+            }
+
+            persistLocalPreferences(next)
+            return next
+        })
+    }
+
+    const updatePreference = (key, value) => {
+        setSettings((previous) => {
+            const next = {
+                ...previous,
                 [key]: value,
-            },
-        }))
+            }
+
+            persistLocalPreferences(next)
+            return next
+        })
+
+        if (key === 'theme') {
+            document.documentElement.dataset.theme = resolveTheme(value)
+        }
+
+        if (key === 'language') {
+            setLanguage(value)
+            setError('')
+            setNotice('')
+        }
     }
 
     const saveSettings = async (event) => {
@@ -52,11 +146,36 @@ export default function Settings() {
         setNotice('')
 
         try {
-            const updated = await api.updateSettings(settings)
-            setSettings(updated)
-            setNotice('Настройки сохранены')
+            const payload = {
+                ...settings,
+                language: getLanguage(),
+            }
+
+            const updated = await api.updateSettings(payload)
+
+            const persisted = {
+                ...payload,
+                ...(updated || {}),
+                notifications: {
+                    ...payload.notifications,
+                    ...(updated?.notifications || {}),
+                },
+                privacy: {
+                    ...payload.privacy,
+                    ...(updated?.privacy || {}),
+                },
+                theme: payload.theme,
+                language: getLanguage(),
+            }
+
+            setSettings(persisted)
+            persistLocalPreferences(persisted)
+            document.documentElement.dataset.theme = resolveTheme(
+                persisted.theme
+            )
+            setNotice(t('settings.saved'))
         } catch (err) {
-            setError(err?.message || 'Не удалось сохранить настройки')
+            setError(err?.message || t('settings.saveFailed'))
         } finally {
             setSaving(false)
         }
@@ -68,9 +187,11 @@ export default function Settings() {
         setNotice('')
 
         if (passwords.next !== passwords.confirm) {
-            setError('Новые пароли не совпадают')
+            setError(t('settings.passwordsMismatch'))
             return
         }
+
+        setPasswordSaving(true)
 
         try {
             await api.changePassword({
@@ -78,11 +199,31 @@ export default function Settings() {
                 next: passwords.next,
             })
 
-            setPasswords({ current: '', next: '', confirm: '' })
-            setNotice('Пароль изменён')
+            setPasswords({
+                current: '',
+                next: '',
+                confirm: '',
+            })
+
+            setNotice(t('settings.passwordChanged'))
         } catch (err) {
-            setError(err?.message || 'Не удалось изменить пароль')
+            setError(
+                err?.message || t('settings.changePasswordFailed')
+            )
+        } finally {
+            setPasswordSaving(false)
         }
+    }
+
+    const notificationLabels = {
+        desktop: t('settings.notifications'),
+        sounds: t('settings.sounds'),
+        mentions: t('settings.mentions'),
+    }
+
+    const privacyLabels = {
+        dmFromEveryone: t('settings.dmFromEveryone'),
+        showOnlineStatus: t('settings.showOnlineStatus'),
     }
 
     return (
@@ -91,218 +232,250 @@ export default function Settings() {
             <Sidebar />
 
             <main className="main">
-                <div className="main__content">
-                    <PageHeader title="Настройки" />
+                <div className="main__content profile-page settings-page">
+                    <PageHeader
+                        title={t('settings.title')}
+                        subtitle="Настройте внешний вид, уведомления и приватность Nebula."
+                    />
 
-                    {loading && <p className="muted">Загрузка…</p>}
-                    {error && <p className="auth-inline-error">{error}</p>}
-                    {notice && <p className="form-notice">{notice}</p>}
+                    {loading && (
+                        <p className="muted profile-loading" role="status">
+                            {t('common.loading')}
+                        </p>
+                    )}
 
-                    {!loading && settings && (
+                    {error && (
+                        <p className="auth-inline-error" role="alert">
+                            {error}
+                        </p>
+                    )}
+
+                    {notice && (
+                        <p className="form-notice" role="status">
+                            {notice}
+                        </p>
+                    )}
+
+                    {!loading && (
                         <>
                             <form
-                                className="settings-form"
+                                className="profile-form profile-form--minimal settings-form"
                                 onSubmit={saveSettings}
                             >
-                                <section className="settings-section">
-                                    <h2 className="section-title">
-                                        Внешний вид
-                                    </h2>
+                                <section className="profile-edit-section">
+                                    <h2>{t('settings.appearance')}</h2>
 
-                                    <div className="settings-form__field">
+                                    <div className="profile-form__field">
                                         <label htmlFor="settings-theme">
-                                            Тема
+                                            {t('settings.theme')}
                                         </label>
+
                                         <select
                                             id="settings-theme"
                                             className="input"
                                             value={settings.theme || 'dark'}
                                             onChange={(event) =>
-                                                setSettings((previous) => ({
-                                                    ...previous,
-                                                    theme: event.target.value,
-                                                }))
+                                                updatePreference(
+                                                    'theme',
+                                                    event.target.value
+                                                )
                                             }
                                         >
-                                            <option value="dark">Тёмная</option>
-                                            <option value="light">Светлая</option>
-                                            <option value="system">Системная</option>
+                                            <option value="dark">
+                                                {t('settings.themeDark')}
+                                            </option>
+                                            <option value="light">
+                                                {t('settings.themeLight')}
+                                            </option>
+                                            <option value="system">
+                                                {t('settings.themeSystem')}
+                                            </option>
                                         </select>
                                     </div>
 
-                                    <div className="settings-form__field">
+                                    <div className="profile-form__field">
                                         <label htmlFor="settings-language">
-                                            Язык
+                                            {t('settings.language')}
                                         </label>
+
                                         <select
                                             id="settings-language"
                                             className="input"
-                                            value={settings.language || 'ru'}
+                                            value={language}
                                             onChange={(event) =>
-                                                setSettings((previous) => ({
-                                                    ...previous,
-                                                    language: event.target.value,
-                                                }))
+                                                updatePreference(
+                                                    'language',
+                                                    event.target.value
+                                                )
                                             }
                                         >
-                                            <option value="ru">Русский</option>
-                                            <option value="en">English</option>
+                                            {languages.map((item) => (
+                                                <option
+                                                    key={item.code}
+                                                    value={item.code}
+                                                >
+                                                    {item.label}
+                                                </option>
+                                            ))}
                                         </select>
                                     </div>
                                 </section>
 
-                                <section className="settings-section">
-                                    <h2 className="section-title">
-                                        Уведомления
-                                    </h2>
+                                <section className="profile-edit-section">
+                                    <h2>{t('settings.notifications')}</h2>
 
-                                    {Object.entries(settings.notifications || {}).map(
-                                        ([key, value]) => (
-                                            <label
-                                                className="settings-toggle"
-                                                key={key}
-                                            >
-                                                <span>{{
-                                                    desktop: 'Уведомления',
-                                                    sounds: 'Звуки',
-                                                    mentions: 'Упоминания',
-                                                }[key] || key}</span>
+                                    {Object.entries(
+                                        settings.notifications || {}
+                                    ).map(([key, value]) => (
+                                        <label
+                                            className="settings-toggle"
+                                            key={key}
+                                        >
+                                            <span>
+                                                {notificationLabels[key] || key}
+                                            </span>
 
-                                                <input
-                                                    type="checkbox"
-                                                    checked={Boolean(value)}
-                                                    onChange={(event) =>
-                                                        updateSetting(
-                                                            'notifications',
-                                                            key,
-                                                            event.target.checked
-                                                        )
-                                                    }
-                                                />
-                                            </label>
-                                        )
-                                    )}
+                                            <input
+                                                type="checkbox"
+                                                checked={Boolean(value)}
+                                                onChange={(event) =>
+                                                    updateSetting(
+                                                        'notifications',
+                                                        key,
+                                                        event.target.checked
+                                                    )
+                                                }
+                                            />
+                                        </label>
+                                    ))}
                                 </section>
 
-                                <section className="settings-section">
-                                    <h2 className="section-title">
-                                        Приватность
-                                    </h2>
+                                <section className="profile-edit-section">
+                                    <h2>{t('settings.privacy')}</h2>
 
-                                    {Object.entries(settings.privacy || {}).map(
-                                        ([key, value]) => (
-                                            <label
-                                                className="settings-toggle"
-                                                key={key}
-                                            >
-                                                <span>{{
-                                                    dmFromEveryone:
-                                                        'Разрешить личные сообщения',
-                                                    showOnlineStatus:
-                                                        'Показывать статус в сети',
-                                                }[key] || key}</span>
+                                    {Object.entries(
+                                        settings.privacy || {}
+                                    ).map(([key, value]) => (
+                                        <label
+                                            className="settings-toggle"
+                                            key={key}
+                                        >
+                                            <span>
+                                                {privacyLabels[key] || key}
+                                            </span>
 
-                                                <input
-                                                    type="checkbox"
-                                                    checked={Boolean(value)}
-                                                    onChange={(event) =>
-                                                        updateSetting(
-                                                            'privacy',
-                                                            key,
-                                                            event.target.checked
-                                                        )
-                                                    }
-                                                />
-                                            </label>
-                                        )
-                                    )}
+                                            <input
+                                                type="checkbox"
+                                                checked={Boolean(value)}
+                                                onChange={(event) =>
+                                                    updateSetting(
+                                                        'privacy',
+                                                        key,
+                                                        event.target.checked
+                                                    )
+                                                }
+                                            />
+                                        </label>
+                                    ))}
                                 </section>
 
-                                <button
-                                    className="btn btn--primary"
-                                    type="submit"
-                                    disabled={saving}
-                                >
-                                    {saving ? 'Сохранение…' : 'Сохранить настройки'}
-                                </button>
+                                <div className="profile-form__actions">
+                                    <button
+                                        className="btn btn--primary"
+                                        type="submit"
+                                        disabled={saving}
+                                    >
+                                        {saving
+                                            ? t('common.saving')
+                                            : t('settings.save')}
+                                    </button>
+                                </div>
                             </form>
 
                             <form
-                                className="settings-form settings-form--password"
+                                className="profile-form profile-form--minimal settings-form settings-form--password"
                                 onSubmit={changePassword}
                             >
-                                <h2 className="section-title">
-                                    Безопасность
-                                </h2>
+                                <section className="profile-edit-section">
+                                    <h2>{t('settings.security')}</h2>
 
-                                <div className="settings-form__field">
-                                    <label htmlFor="password-current">
-                                        Текущий пароль
-                                    </label>
-                                    <input
-                                        id="password-current"
-                                        className="input"
-                                        type="password"
-                                        autoComplete="current-password"
-                                        value={passwords.current}
-                                        onChange={(event) =>
-                                            setPasswords((previous) => ({
-                                                ...previous,
-                                                current: event.target.value,
-                                            }))
-                                        }
-                                        required
-                                    />
-                                </div>
+                                    <div className="profile-form__field">
+                                        <label htmlFor="password-current">
+                                            {t('settings.currentPassword')}
+                                        </label>
 
-                                <div className="settings-form__field">
-                                    <label htmlFor="password-next">
-                                        Новый пароль
-                                    </label>
-                                    <input
-                                        id="password-next"
-                                        className="input"
-                                        type="password"
-                                        autoComplete="new-password"
-                                        minLength={8}
-                                        value={passwords.next}
-                                        onChange={(event) =>
-                                            setPasswords((previous) => ({
-                                                ...previous,
-                                                next: event.target.value,
-                                            }))
-                                        }
-                                        required
-                                    />
-                                </div>
+                                        <input
+                                            id="password-current"
+                                            className="input"
+                                            type="password"
+                                            autoComplete="current-password"
+                                            value={passwords.current}
+                                            onChange={(event) =>
+                                                setPasswords((previous) => ({
+                                                    ...previous,
+                                                    current: event.target.value,
+                                                }))
+                                            }
+                                            required
+                                        />
+                                    </div>
 
-                                <div className="settings-form__field">
-                                    <label htmlFor="password-confirm">
-                                        Повторите новый пароль
-                                    </label>
-                                    <input
-                                        id="password-confirm"
-                                        className="input"
-                                        type="password"
-                                        autoComplete="new-password"
-                                        minLength={8}
-                                        value={passwords.confirm}
-                                        onChange={(event) =>
-                                            setPasswords((previous) => ({
-                                                ...previous,
-                                                confirm: event.target.value,
-                                            }))
-                                        }
-                                        required
-                                    />
-                                </div>
+                                    <div className="profile-form__field">
+                                        <label htmlFor="password-next">
+                                            {t('settings.newPassword')}
+                                        </label>
 
-                                <button
-                                    className="btn btn--primary"
-                                    type="submit"
-                                >
-                                    Изменить пароль
-                                </button>
+                                        <input
+                                            id="password-next"
+                                            className="input"
+                                            type="password"
+                                            autoComplete="new-password"
+                                            minLength={8}
+                                            value={passwords.next}
+                                            onChange={(event) =>
+                                                setPasswords((previous) => ({
+                                                    ...previous,
+                                                    next: event.target.value,
+                                                }))
+                                            }
+                                            required
+                                        />
+                                    </div>
+
+                                    <div className="profile-form__field">
+                                        <label htmlFor="password-confirm">
+                                            {t('settings.repeatPassword')}
+                                        </label>
+
+                                        <input
+                                            id="password-confirm"
+                                            className="input"
+                                            type="password"
+                                            autoComplete="new-password"
+                                            minLength={8}
+                                            value={passwords.confirm}
+                                            onChange={(event) =>
+                                                setPasswords((previous) => ({
+                                                    ...previous,
+                                                    confirm: event.target.value,
+                                                }))
+                                            }
+                                            required
+                                        />
+                                    </div>
+
+                                    <div className="profile-form__actions">
+                                        <button
+                                            className="btn btn--primary"
+                                            type="submit"
+                                            disabled={passwordSaving}
+                                        >
+                                            {passwordSaving
+                                                ? t('common.saving')
+                                                : t('settings.changePassword')}
+                                        </button>
+                                    </div>
+                                </section>
                             </form>
                         </>
                     )}

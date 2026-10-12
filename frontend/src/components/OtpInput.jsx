@@ -1,11 +1,13 @@
 import { useRef } from 'react'
+import { useI18n } from '@/i18n'
 
 export default function OtpInput({
-    length = 6,
-    value = '',
-    onChange,
-    disabled = false,
-}) {
+                                     length = 6,
+                                     value = '',
+                                     onChange,
+                                     disabled = false,
+                                 }) {
+    const { t } = useI18n()
     const refs = useRef([])
     const cells = value.split('').concat(Array(length).fill('')).slice(0, length)
 
@@ -14,7 +16,10 @@ export default function OtpInput({
         const next = [...cells]
         next[i] = digit
         onChange(next.join(''))
-        if (digit && i < length - 1) refs.current[i + 1]?.focus()
+
+        if (digit && i < length - 1) {
+            refs.current[i + 1]?.focus()
+        }
     }
 
     const handleKeyDown = (i, e) => {
@@ -25,9 +30,11 @@ export default function OtpInput({
 
     const handlePaste = (e) => {
         e.preventDefault()
+
         const text = (e.clipboardData.getData('text') || '')
             .replace(/\D/g, '')
             .slice(0, length)
+
         onChange(text)
         refs.current[Math.min(text.length, length - 1)]?.focus()
     }
@@ -47,7 +54,7 @@ export default function OtpInput({
                     autoFocus={i === 0}
                     maxLength={1}
                     disabled={disabled}
-                    aria-label={`Цифра ${i + 1} из ${length}`}
+                    aria-label={t('auth.otpDigit', { index: i + 1, length })}
                     onChange={(e) => handleChange(i, e.target.value)}
                     onKeyDown={(e) => handleKeyDown(i, e)}
                     onPaste={handlePaste}

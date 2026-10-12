@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '@/api'
+import { useI18n } from '@/i18n'
 
 export default function VoiceBar({ room, onLeave }) {
+    const { t } = useI18n()
     const nav = useNavigate()
     const [leaving, setLeaving] = useState(false)
 
@@ -10,6 +12,7 @@ export default function VoiceBar({ room, onLeave }) {
 
     const leave = async () => {
         setLeaving(true)
+
         try {
             await api.leaveVoice(room.id)
             onLeave?.()
@@ -22,15 +25,16 @@ export default function VoiceBar({ room, onLeave }) {
     return (
         <div className="voice-bar">
             <div className="voice-bar__info">
-                <span className="voice-bar__label">Голос подключён</span>
+                <span className="voice-bar__label">{t('voice.connected')}</span>
                 <span className="voice-bar__name">{room.name}</span>
             </div>
+
             <button
                 type="button"
                 className="voice-bar__leave"
                 onClick={leave}
                 disabled={leaving}
-                title="Отключиться"
+                title={t('common.disconnect')}
             >
                 ⏏
             </button>

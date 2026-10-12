@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useI18n } from '@/i18n'
 
 function EyeIcon({ className }) {
     return (
@@ -15,25 +16,27 @@ function EyeIcon({ className }) {
                 strokeWidth="1.8"
                 strokeLinejoin="round"
             />
-            <circle cx="12" cy="12" r="2.8" stroke="currentColor" strokeWidth="1.8" />
+            <circle
+                cx="12"
+                cy="12"
+                r="2.8"
+                stroke="currentColor"
+                strokeWidth="1.8"
+            />
         </svg>
     )
 }
 
-/**
- * Поле пароля с кнопкой «показать».
- * variant="login"   — разметка окна авторизации (.password-wrapper)
- * variant="profile" — разметка карточек регистрации/восстановления (.pass-wrap)
- */
 export default function PasswordInput({
-    variant = 'login',
-    invalid = false,
-    ...inputProps
-}) {
+                                          variant = 'login',
+                                          invalid = false,
+                                          ...inputProps
+                                      }) {
+    const { t } = useI18n()
     const [visible, setVisible] = useState(false)
 
     const type = visible ? 'text' : 'password'
-    const label = visible ? 'Скрыть пароль' : 'Показать пароль'
+    const label = visible ? t('auth.hidePassword') : t('auth.showPassword')
     const toggle = () => setVisible((value) => !value)
 
     if (variant === 'profile') {

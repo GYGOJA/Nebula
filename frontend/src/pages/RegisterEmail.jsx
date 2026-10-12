@@ -4,8 +4,10 @@ import Progress from '@/components/Progress'
 import { api } from '@/api'
 import { pendingRegistration } from '@/api/client'
 import { isEmail } from '@/utils/auth'
+import { useI18n } from '@/i18n'
 
 export default function RegisterEmail() {
+    const { t } = useI18n()
     const nav = useNavigate()
 
     const [email, setEmail] = useState('')
@@ -19,12 +21,12 @@ export default function RegisterEmail() {
         const normalized = email.trim().toLowerCase()
 
         if (!normalized) {
-            setError('Введите почту')
+            setError(t('validation.emailRequired'))
             return
         }
 
         if (!isEmail(normalized)) {
-            setError('Введите корректный адрес почты')
+            setError(t('validation.emailInvalid'))
             return
         }
 
@@ -32,12 +34,10 @@ export default function RegisterEmail() {
 
         try {
             await api.sendCode({ email: normalized })
-
-            // Сохраняем только после успешной отправки кода.
             pendingRegistration.set({ email: normalized })
             nav('/register/verify')
         } catch (err) {
-            setError(err?.message || 'Не удалось отправить код')
+            setError(err?.message || t('auth.sendCodeFailed'))
         } finally {
             setLoading(false)
         }
@@ -45,23 +45,21 @@ export default function RegisterEmail() {
 
     return (
         <section className="auth-card auth-card--narrow">
-
             <Progress step={1} />
 
             <h1 className="auth-card__title auth-card__title--narrow">
-                Создайте аккаунт
+                {t('registerEmail.title')}
             </h1>
 
             <p className="auth-card__lead">
-                Укажите почту, мы отправим на неё код
+                {t('registerEmail.lead1')}
                 <br />
-                подтверждения.
+                {t('registerEmail.lead2')}
             </p>
 
             <form onSubmit={onSubmit} noValidate>
-
                 <label className="auth-label" htmlFor="register-email">
-                    почта:
+                    {t('registerEmail.emailLabel')}
                 </label>
 
                 <input
@@ -82,25 +80,23 @@ export default function RegisterEmail() {
                 )}
 
                 <p className="auth-notice">
-                    Сообщения в Nebula не имеют сквозного
+                    {t('registerEmail.notice1')}
                     <br />
-                    шифрования.
+                    {t('registerEmail.notice2')}
                 </p>
 
                 <button className="auth-btn" type="submit" disabled={loading}>
-                    {loading ? 'Отправка…' : 'Получить код'}
+                    {loading ? t('common.sending') : t('auth.getCode')}
                 </button>
-
             </form>
 
             <div className="auth-bottom auth-bottom--right">
-                <span>Уже есть аккаунт? </span>
+                <span>{t('registerEmail.haveAccount')} </span>
 
                 <Link to="/login" className="orange">
-                    Войти
+                    {t('auth.signIn')}
                 </Link>
             </div>
-
         </section>
     )
 }

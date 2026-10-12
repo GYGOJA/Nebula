@@ -7,14 +7,16 @@ import PageHeader from '@/components/PageHeader'
 import Avatar from '@/components/Avatar'
 import EmptyState from '@/components/EmptyState'
 import { api } from '@/api'
+import { useI18n } from '@/i18n'
 
 const TYPES = [
-    { value: 'users', label: 'Люди' },
-    { value: 'spaces', label: 'Пространства' },
-    { value: 'messages', label: 'Сообщения' },
+    { value: 'users', labelKey: 'search.typeUsers' },
+    { value: 'spaces', labelKey: 'search.typeSpaces' },
+    { value: 'messages', labelKey: 'search.typeMessages' },
 ]
 
 export default function Search() {
+    const { t } = useI18n()
     const [type, setType] = useState('users')
     const [query, setQuery] = useState('')
     const [results, setResults] = useState([])
@@ -26,6 +28,7 @@ export default function Search() {
         event.preventDefault()
 
         const value = query.trim()
+
         if (!value) {
             setResults([])
             setSearched(false)
@@ -48,7 +51,7 @@ export default function Search() {
             setResults(Array.isArray(result) ? result : [])
         } catch (err) {
             setResults([])
-            setError(err?.message || 'Поиск временно недоступен')
+            setError(err?.message || t('search.unavailable'))
         } finally {
             setLoading(false)
         }
@@ -61,18 +64,27 @@ export default function Search() {
 
             <main className="main">
                 <div className="main__content">
-                    <PageHeader title="Поиск" />
+                    <PageHeader title={t('nav.search')} />
 
                     <form className="search-page__form" onSubmit={search}>
-                        <label htmlFor="global-search">Что ищем?</label>
+                        <label htmlFor="global-search">{t('search.question')}</label>
 
-                        <input
-                            id="global-search"
-                            className="input"
-                            value={query}
-                            onChange={(event) => setQuery(event.target.value)}
-                            placeholder="Введите запрос"
-                        />
+                        <div className="search-page__input-row">
+                            <input
+                                id="global-search"
+                                className="input"
+                                value={query}
+                                onChange={(event) => setQuery(event.target.value)}
+                                placeholder={t('search.placeholder')}
+                            />
+                            <button
+                                className="btn btn--primary search-page__submit"
+                                type="submit"
+                                disabled={loading || !query.trim()}
+                            >
+                                {loading ? t('search.searching') : t('search.submit')}
+                            </button>
+                        </div>
 
                         <div className="search-page__types">
                             {TYPES.map((item) => (
@@ -86,27 +98,20 @@ export default function Search() {
                                     }`}
                                     onClick={() => setType(item.value)}
                                 >
-                                    {item.label}
+                                    {t(item.labelKey)}
                                 </button>
                             ))}
                         </div>
 
-                        <button
-                            className="btn btn--primary"
-                            type="submit"
-                            disabled={loading || !query.trim()}
-                        >
-                            {loading ? 'Поиск…' : 'Найти'}
-                        </button>
                     </form>
 
                     {error && <p className="auth-inline-error">{error}</p>}
-                    {loading && <p className="muted">Поиск…</p>}
+                    {loading && <p className="muted">{t('search.searching')}</p>}
 
                     {!loading && !error && searched && results.length === 0 && (
                         <EmptyState
-                            title="Ничего не найдено"
-                            description="Попробуйте изменить поисковый запрос."
+                            title={t('search.emptyTitle')}
+                            description={t('search.emptyDesc')}
                         />
                     )}
 
@@ -136,17 +141,14 @@ export default function Search() {
                                                 className="btn btn--ghost"
                                                 to={`/app/dm/${item.id}`}
                                             >
-                                                Написать
+                                                {t('common.write')}
                                             </Link>
                                         </>
                                     )}
 
                                     {type === 'spaces' && (
                                         <>
-                                            <span
-                                                className="icon-placeholder"
-                                                aria-hidden="true"
-                                            />
+                                            <span className="icon-placeholder" aria-hidden="true" />
                                             <div className="friend-row__info">
                                                 <div className="friend-row__name">
                                                     {item.name}
@@ -159,7 +161,7 @@ export default function Search() {
                                                 className="btn btn--ghost"
                                                 to={`/app/spaces/${item.id}`}
                                             >
-                                                Открыть
+                                                {t('common.open')}
                                             </Link>
                                         </>
                                     )}
@@ -179,7 +181,7 @@ export default function Search() {
                                                     className="btn btn--ghost"
                                                     to={`/app/channels/${item.channelId}`}
                                                 >
-                                                    Перейти
+                                                    {t('search.goToChannel')}
                                                 </Link>
                                             )}
                                         </>

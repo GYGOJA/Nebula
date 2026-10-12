@@ -9,8 +9,10 @@ import EmptyState from '@/components/EmptyState'
 import MessageItem from '@/components/MessageItem'
 import MessageComposer from '@/components/MessageComposer'
 import { api } from '@/api'
+import { useI18n } from '@/i18n'
 
 export function DmList() {
+    const { t } = useI18n()
     const [conversations, setConversations] = useState([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState('')
@@ -23,7 +25,7 @@ export function DmList() {
             const result = await api.getDmConversations()
             setConversations(Array.isArray(result) ? result : [])
         } catch (err) {
-            setError(err?.message || 'Не удалось загрузить диалоги')
+            setError(err?.message || t('dm.loadFailed'))
         } finally {
             setLoading(false)
         }
@@ -40,9 +42,9 @@ export function DmList() {
 
             <main className="main">
                 <div className="main__content">
-                    <PageHeader title="Личные сообщения" />
+                    <PageHeader title={t('nav.directMessages')} />
 
-                    {loading && <p className="muted">Загрузка…</p>}
+                    {loading && <p className="muted">{t('common.loading')}</p>}
 
                     {!loading && error && (
                         <div>
@@ -52,15 +54,15 @@ export function DmList() {
                                 className="btn btn--ghost"
                                 onClick={load}
                             >
-                                Повторить
+                                {t('common.retry')}
                             </button>
                         </div>
                     )}
 
                     {!loading && !error && conversations.length === 0 && (
                         <EmptyState
-                            title="Диалогов пока нет"
-                            description="Когда появятся личные переписки, они будут отображаться здесь."
+                            title={t('dm.emptyTitle')}
+                            description={t('dm.emptyDesc')}
                         />
                     )}
 
@@ -83,7 +85,7 @@ export function DmList() {
                                             {conversation.displayName || conversation.name}
                                         </div>
                                         <div className="friend-row__status">
-                                            {conversation.last?.text || 'Нет сообщений'}
+                                            {conversation.last?.text || t('dm.noMessages')}
                                         </div>
                                     </div>
                                 </Link>
@@ -99,6 +101,7 @@ export function DmList() {
 }
 
 export function DmChat() {
+    const { t } = useI18n()
     const { userId } = useParams()
     const [messages, setMessages] = useState([])
     const [conversation, setConversation] = useState(null)
@@ -123,7 +126,7 @@ export function DmChat() {
             )
             setMessages(Array.isArray(result) ? result : [])
         } catch (err) {
-            setError(err?.message || 'Не удалось загрузить переписку')
+            setError(err?.message || t('dm.chatLoadFailed'))
         } finally {
             setLoading(false)
         }
@@ -140,7 +143,7 @@ export function DmChat() {
             const message = await api.sendDm(userId, text)
             setMessages((previous) => [...previous, message])
         } catch (err) {
-            setSendError(err?.message || 'Не удалось отправить сообщение')
+            setSendError(err?.message || t('dm.sendFailed'))
             throw err
         }
     }
@@ -162,18 +165,18 @@ export function DmChat() {
                         <div className="chat__title">
                             {conversation?.displayName ||
                                 conversation?.name ||
-                                'Личные сообщения'}
+                                t('nav.directMessages')}
                         </div>
                         <div className="chat__sub">
                             {conversation?.status === 'online'
-                                ? 'В сети'
-                                : 'Статус недоступен'}
+                                ? t('friends.statusOnline')
+                                : t('friends.statusUnavailable')}
                         </div>
                     </div>
                 </header>
 
                 <div className="chat__messages">
-                    {loading && <p className="muted">Загрузка…</p>}
+                    {loading && <p className="muted">{t('common.loading')}</p>}
 
                     {!loading && error && (
                         <div>
@@ -183,15 +186,15 @@ export function DmChat() {
                                 className="btn btn--ghost"
                                 onClick={load}
                             >
-                                Повторить
+                                {t('common.retry')}
                             </button>
                         </div>
                     )}
 
                     {!loading && !error && messages.length === 0 && (
                         <EmptyState
-                            title="Сообщений пока нет"
-                            description="Отправьте первое сообщение, чтобы начать переписку."
+                            title={t('dm.chatEmptyTitle')}
+                            description={t('dm.chatEmptyDesc')}
                         />
                     )}
 
@@ -209,7 +212,7 @@ export function DmChat() {
                 </div>
 
                 <MessageComposer
-                    placeholder="Написать сообщение"
+                    placeholder={t('messages.placeholder')}
                     onSend={send}
                     disabled={loading || !!error}
                 />

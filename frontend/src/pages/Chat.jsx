@@ -7,8 +7,10 @@ import MessageList from '@/components/MessageList'
 import MessageComposer from '@/components/MessageComposer'
 import InviteDialog from '@/components/InviteDialog'
 import { api } from '@/api'
+import { useI18n } from '@/i18n'
 
 export default function Chat() {
+    const { t, language } = useI18n()
     const { channelId } = useParams()
 
     const [channel, setChannel] = useState(null)
@@ -19,31 +21,38 @@ export default function Chat() {
     const [inviteOpen, setInviteOpen] = useState(false)
 
     const authorsById = useMemo(() => {
-        const map = { me: { name: 'Вы', avatar: 'Вы' } }
+        const map = {
+            me: { name: t('common.you'), avatar: t('common.you') },
+        }
         for (const u of users) map[u.id] = u
         return map
-    }, [users])
+    }, [users, language])
 
     const loadAll = async () => {
-        setLoading(true); setError('')
+        setLoading(true)
+        setError('')
+
         try {
             const [channels, msgs, friends] = await Promise.all([
                 api.getChannels(),
                 api.getMessages(channelId),
                 api.getFriends(),
             ])
+
             const ch = channels.find((c) => c.id === channelId)
             setChannel(ch || null)
             setMessages(msgs)
             setUsers(friends)
         } catch (e) {
-            setError(e?.message || 'Не удалось загрузить канал')
+            setError(e?.message || t('chat.loadFailed'))
         } finally {
             setLoading(false)
         }
     }
 
-    useEffect(() => { loadAll() }, [channelId])
+    useEffect(() => {
+        loadAll()
+    }, [channelId])
 
     if (!loading && !channel) return <Navigate to="/app" replace />
 
@@ -60,18 +69,26 @@ export default function Chat() {
             <main className="chat">
                 <header className="chat__header">
                     <div className="chat__title-wrap">
-                        <div className="chat__title"># {channel?.name || channelId}</div>
+                        <div className="chat__title">
+                            # {channel?.name || channelId}
+                        </div>
                         <div className="chat__sub">
-                            {channel?.desc || 'Канал'} · разбираем код по пятницам
+                            {channel?.desc || t('chat.channel')}
                         </div>
                     </div>
-                    <input className="chat__search" placeholder="Поиск по потоку" readOnly />
+
+                    <input
+                        className="chat__search"
+                        placeholder={t('chat.searchPlaceholder')}
+                        readOnly
+                    />
+
                     <button
                         type="button"
                         className="main__invite"
                         onClick={() => setInviteOpen(true)}
                     >
-                        Пригласить
+                        {t('common.invite')}
                     </button>
                 </header>
 
@@ -84,7 +101,9 @@ export default function Chat() {
                 />
 
                 <MessageComposer
-                    placeholder={`Написать в ${channel?.name || channelId}`}
+                    placeholder={t('chat.messageTo', {
+                        name: channel?.name || channelId,
+                    })}
                     onSend={send}
                     disabled={loading || !!error}
                 />

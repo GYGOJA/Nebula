@@ -7,21 +7,15 @@ export default function EmptyState({ title, description, action }) {
             />
 
             {title && (
-                <h3 className="empty-state__title">
-                    {title}
-                </h3>
+                <h3 className="empty-state__title">{title}</h3>
             )}
 
             {description && (
-                <p className="empty-state__desc">
-                    {description}
-                </p>
+                <p className="empty-state__desc">{description}</p>
             )}
 
             {action && (
-                <div className="empty-state__action">
-                    {action}
-                </div>
+                <div className="empty-state__action">{action}</div>
             )}
         </div>
     )

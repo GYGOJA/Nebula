@@ -8,11 +8,9 @@ import {
 } from 'react'
 import { api } from '@/api'
 import { session, UNAUTHORIZED_EVENT } from '@/api/client'
+import { t } from '@/i18n'
 
 const AuthCtx = createContext(null)
-
-// Сессия восстанавливается синхронно при первом рендере, поэтому
-// RequireAuth не успевает ошибочно отправить авторизованного на /login.
 const restoreUser = () => (session.getToken() ? session.getUser() : null)
 
 export function AuthProvider({ children }) {
@@ -27,7 +25,7 @@ export function AuthProvider({ children }) {
         const { user: nextUser, token } = payload || {}
 
         if (!nextUser || !token) {
-            throw new Error('Сервер вернул некорректный ответ')
+            throw new Error(t('errors.badResponse'))
         }
 
         session.save(token, nextUser)
@@ -35,7 +33,6 @@ export function AuthProvider({ children }) {
         return nextUser
     }, [])
 
-    // Токен протух (401) или выход выполнен в другой вкладке.
     useEffect(() => {
         const onStorage = (e) => {
             if (e.key === null || e.key === 'nebula_token') {
@@ -78,6 +75,10 @@ export function AuthProvider({ children }) {
 
 export function useAuth() {
     const ctx = useContext(AuthCtx)
-    if (!ctx) throw new Error('useAuth должен вызываться внутри <AuthProvider>')
+
+    if (!ctx) {
+        throw new Error('useAuth must be used within <AuthProvider>')
+    }
+
     return ctx
 }

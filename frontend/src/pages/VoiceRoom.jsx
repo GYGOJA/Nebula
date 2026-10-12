@@ -7,8 +7,10 @@ import PageHeader from '@/components/PageHeader'
 import Avatar from '@/components/Avatar'
 import EmptyState from '@/components/EmptyState'
 import { api } from '@/api'
+import { useI18n } from '@/i18n'
 
 export default function VoiceRoom() {
+    const { t } = useI18n()
     const { roomId } = useParams()
     const [rooms, setRooms] = useState([])
     const [room, setRoom] = useState(null)
@@ -24,10 +26,13 @@ export default function VoiceRoom() {
         try {
             const result = await api.getVoiceRooms()
             const list = Array.isArray(result) ? result : []
+
             setRooms(list)
-            setRoom(list.find((item) => String(item.id) === String(roomId)) || null)
+            setRoom(
+                list.find((item) => String(item.id) === String(roomId)) || null
+            )
         } catch (err) {
-            setError(err?.message || 'Не удалось загрузить голосовые комнаты')
+            setError(err?.message || t('voice.loadFailed'))
         } finally {
             setLoading(false)
         }
@@ -46,10 +51,10 @@ export default function VoiceRoom() {
             const updated = await api.joinVoice(roomId)
             setRoom(updated)
             setNotice(
-                'Вы присоединились к комнате. Передача аудио потребует подключения голосового сервера.'
+                t('voice.joined')
             )
         } catch (err) {
-            setError(err?.message || 'Не удалось подключиться')
+            setError(err?.message || t('voice.connectFailed'))
         } finally {
             setBusy(false)
         }
@@ -63,9 +68,9 @@ export default function VoiceRoom() {
         try {
             await api.leaveVoice(roomId)
             await load()
-            setNotice('Вы вышли из комнаты')
+            setNotice(t('voice.left'))
         } catch (err) {
-            setError(err?.message || 'Не удалось выйти из комнаты')
+            setError(err?.message || t('voice.leaveFailed'))
         } finally {
             setBusy(false)
         }
@@ -78,35 +83,35 @@ export default function VoiceRoom() {
 
             <main className="main">
                 <div className="main__content">
-                    <PageHeader title={room?.name || 'Голосовая комната'} />
+                    <PageHeader title={room?.name || t('voice.roomTitle')} />
 
-                    {loading && <p className="muted">Загрузка…</p>}
+                    {loading && <p className="muted">{t('common.loading')}</p>}
                     {error && <p className="auth-inline-error">{error}</p>}
                     {notice && <p className="form-notice">{notice}</p>}
 
                     {!loading && !error && !room && (
                         <EmptyState
-                            title="Комната не найдена"
-                            description="Проверьте ссылку или выберите комнату из списка."
+                            title={t('voice.notFoundTitle')}
+                            description={t('voice.notFoundDesc')}
                         />
                     )}
 
                     {!loading && !error && room && (
                         <section className="voice-room">
                             <div className="voice-room__status">
-                                <span
-                                    className="icon-placeholder"
-                                    aria-hidden="true"
-                                />
+                                <span className="icon-placeholder" aria-hidden="true" />
                                 <span>
-                                    Участников: {room.members ?? room.participants?.length ?? 0}
+                                    {t('voice.participantsCount', {
+                                        count:
+                                            room.members ??
+                                            room.participants?.length ??
+                                            0,
+                                    })}
                                 </span>
                             </div>
 
                             <p className="muted">
-                                Интерфейс подключения готов. Для реального
-                                голосового общения потребуется WebRTC и
-                                signaling-сервис на backend.
+                                {t('voice.notice')}
                             </p>
 
                             <div className="voice-room__actions">
@@ -116,7 +121,7 @@ export default function VoiceRoom() {
                                     onClick={join}
                                     disabled={busy}
                                 >
-                                    {busy ? 'Подключение…' : 'Подключиться'}
+                                    {busy ? t('voice.connecting') : t('voice.connect')}
                                 </button>
 
                                 <button
@@ -125,16 +130,16 @@ export default function VoiceRoom() {
                                     onClick={leave}
                                     disabled={busy}
                                 >
-                                    Отключиться
+                                    {t('common.disconnect')}
                                 </button>
                             </div>
 
-                            <h2 className="section-title">Комнаты</h2>
+                            <h2 className="section-title">{t('voice.rooms')}</h2>
 
                             {rooms.length === 0 ? (
                                 <EmptyState
-                                    title="Комнат пока нет"
-                                    description="Список появится после загрузки данных."
+                                    title={t('voice.noRoomsTitle')}
+                                    description={t('voice.noRoomsDesc')}
                                 />
                             ) : (
                                 <div className="space-channel-list">
@@ -144,21 +149,18 @@ export default function VoiceRoom() {
                                             className="space-channel"
                                             to={`/app/voice/${item.id}`}
                                         >
-                                            <span
-                                                className="icon-placeholder"
-                                                aria-hidden="true"
-                                            />
+                                            <span className="icon-placeholder" aria-hidden="true" />
                                             <span>{item.name}</span>
                                         </Link>
                                     ))}
                                 </div>
                             )}
 
-                            <h2 className="section-title">Участники</h2>
+                            <h2 className="section-title">{t('voice.participants')}</h2>
 
                             {!room.participants?.length ? (
                                 <p className="muted">
-                                    Данные об участниках пока недоступны.
+                                    {t('voice.noParticipantData')}
                                 </p>
                             ) : (
                                 <div className="friend-list">
@@ -180,7 +182,7 @@ export default function VoiceRoom() {
                                                 <span>
                                                     {user.displayName ||
                                                         user.name ||
-                                                        'Пользователь'}
+                                                        t('common.user')}
                                                 </span>
                                             </div>
                                         )

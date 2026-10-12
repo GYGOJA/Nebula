@@ -1,76 +1,66 @@
 import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import Logo from '@/components/Logo'
-import PasswordInput from '@/components/PasswordInput'
 import { useAuth } from '@/context/AuthContext'
-import { api } from '@/api'
-import { pendingRegistration } from '@/api/client'
+import PasswordInput from '@/components/PasswordInput'
+import Logo from '@/components/Logo'
+import { useI18n } from '@/i18n'
 
 export default function Login() {
+    const { t } = useI18n()
+    const { login } = useAuth()
     const nav = useNavigate()
     const location = useLocation()
-    const { login } = useAuth()
 
     const [loginValue, setLoginValue] = useState('')
     const [password, setPassword] = useState('')
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState('')
+    const [noticeKey, setNoticeKey] = useState(
+        location.state?.noticeKey || ''
+    )
+    const notice = noticeKey ? t(noticeKey) : ''
 
-    const notice = location.state?.notice || ''
-    const from = location.state?.from?.pathname
-    const target = from && from.startsWith('/app') ? from : '/app'
-
-    const onSubmit = async (e) => {
-        e.preventDefault()
+    const onSubmit = async (event) => {
+        event.preventDefault()
         setError('')
+        setNoticeKey('')
 
-        const normalized = loginValue.trim().toLowerCase()
-
-        if (!normalized || !password) {
-            setError('Заполните все поля')
+        if (!loginValue.trim() || !password) {
+            setError(t('login.enterCredentials'))
             return
         }
 
         setLoading(true)
 
         try {
-            await login({ login: normalized, password })
-            nav(target, { replace: true })
-        } catch (err) {
-            if (err?.code === 'EMAIL_NOT_VERIFIED' && err.data?.email) {
-                // Почта не подтверждена — отправляем код и ведём на ввод кода.
-                try {
-                    await api.sendCode({ email: err.data.email })
-                    pendingRegistration.set({ email: err.data.email })
-                    nav('/register/verify')
-                    return
-                } catch (sendErr) {
-                    setError(sendErr?.message || 'Не удалось отправить код')
-                    return
-                }
-            }
+            await login({
+                login: loginValue.trim(),
+                password,
+            })
 
-            setError(err?.message || 'Не удалось выполнить вход')
+            const destination = location.state?.from?.pathname || '/app'
+            nav(destination, { replace: true })
+        } catch (err) {
+            setError(err?.message || t('login.failed'))
         } finally {
             setLoading(false)
         }
     }
 
     return (
-        <div className="auth-window">
-            <div className="auth-content">
+        <div className="login-page">
+            <div className="login-card">
+                <h1 className="login-title">{t('login.title')}</h1>
 
-                <h1 className="auth-title">Авторизация</h1>
-
-                <form className="auth-form" id="loginForm" onSubmit={onSubmit}>
+                <form id="loginForm" onSubmit={onSubmit} noValidate>
                     <div className="field">
-                        <label className="field-label" htmlFor="login-email">
-                            почта/username:
+                        <label className="field-label" htmlFor="login">
+                            {t('login.loginLabel')}
                         </label>
 
                         <input
+                            id="login"
                             className="input"
-                            id="login-email"
                             name="login"
                             type="text"
                             autoComplete="username"
@@ -81,8 +71,11 @@ export default function Login() {
                     </div>
 
                     <div className="field">
-                        <label className="field-label" htmlFor="login-password">
-                            пароль:
+                        <label
+                            className="field-label"
+                            htmlFor="login-password"
+                        >
+                            {t('auth.passwordLabel')}
                         </label>
 
                         <PasswordInput
@@ -95,7 +88,7 @@ export default function Login() {
                         />
 
                         <Link to="/recover" className="forgot-password">
-                            Забыли пароль?
+                            {t('login.forgot')}
                         </Link>
                     </div>
                 </form>
@@ -116,20 +109,23 @@ export default function Login() {
                         className="login-button"
                         disabled={loading}
                     >
-                        {loading ? 'Вход…' : 'Вход'}
+                        {loading ? t('login.submitting') : t('login.submit')}
                     </button>
 
                     <div className="register-text">
-                        <span>Нет учетной записи? </span>
+                        <span>{t('login.noAccount')} </span>
 
                         <Link to="/register" className="register-link">
-                            Зарегистрируйся
+                            {t('login.register')}
                         </Link>
                     </div>
                 </div>
 
-                <Logo variant="animation" className="planet-logo" alt="" />
-
+                <Logo
+                    variant="animation"
+                    className="planet-logo"
+                    alt=""
+                />
             </div>
         </div>
     )

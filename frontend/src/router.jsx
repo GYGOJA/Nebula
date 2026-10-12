@@ -1,4 +1,3 @@
-
 import { createBrowserRouter, Navigate } from 'react-router-dom'
 
 import AuthLayout from '@/components/AuthLayout'
@@ -38,101 +37,40 @@ export const router = createBrowserRouter([
         path: '/',
         element: <Navigate to="/app" replace />,
     },
-
     {
         element: <AuthLayout />,
         children: [
-            {
-                path: '/login',
-                element: <Login />,
-            },
-            {
-                path: '/register',
-                element: <RegisterEmail />,
-            },
-            {
-                path: '/register/verify',
-                element: <RegisterVerify />,
-            },
-            {
-                path: '/register/profile',
-                element: <RegisterProfile />,
-            },
-            {
-                path: '/recover',
-                element: <RecoverPassword />,
-            },
+            { path: '/login', element: <Login /> },
+            { path: '/register', element: <RegisterEmail /> },
+            { path: '/register/verify', element: <RegisterVerify /> },
+            { path: '/register/profile', element: <RegisterProfile /> },
+            { path: '/recover', element: <RecoverPassword /> },
         ],
     },
-
     {
         path: '/invite/:code',
         element: <Invite />,
     },
-
     {
         path: '/app',
         element: <AppLayout />,
         children: [
-            {
-                index: true,
-                element: <Home />,
-            },
-            {
-                path: 'home',
-                element: <Navigate to="/app" replace />,
-            },
-            {
-                path: 'channels/:channelId',
-                element: <Chat />,
-            },
-            {
-                path: 'friends',
-                element: <Friends />,
-            },
-            {
-                path: 'search',
-                element: <Search />,
-            },
-            {
-                path: 'settings',
-                element: <Settings />,
-            },
-            {
-                path: 'profile',
-                element: <Profile />,
-            },
-            {
-                path: 'spaces',
-                element: <SpacesList />,
-            },
-            {
-                path: 'spaces/new',
-                element: <CreateSpace />,
-            },
-            {
-                path: 'spaces/:spaceId',
-                element: <SpaceDetail />,
-            },
-            {
-                path: 'dm',
-                element: <DmList />,
-            },
-            {
-                path: 'dm/:userId',
-                element: <DmChat />,
-            },
-            {
-                path: 'voice/:roomId',
-                element: <VoiceRoom />,
-            },
-            {
-                path: 'voice',
-                element: <Navigate to="/app" replace />,
-            },
+            { index: true, element: <Home /> },
+            { path: 'home', element: <Navigate to="/app" replace /> },
+            { path: 'channels/:channelId', element: <Chat /> },
+            { path: 'friends', element: <Friends /> },
+            { path: 'search', element: <Search /> },
+            { path: 'settings', element: <Settings /> },
+            { path: 'profile', element: <Profile /> },
+            { path: 'spaces', element: <SpacesList /> },
+            { path: 'spaces/new', element: <CreateSpace /> },
+            { path: 'spaces/:spaceId', element: <SpaceDetail /> },
+            { path: 'dm', element: <DmList /> },
+            { path: 'dm/:userId', element: <DmChat /> },
+            { path: 'voice/:roomId', element: <VoiceRoom /> },
+            { path: 'voice', element: <Navigate to="/app" replace /> },
         ],
     },
-
     {
         path: '*',
         element: <NotFound />,
