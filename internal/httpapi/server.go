@@ -24,10 +24,11 @@ type Server struct {
 	friends *service.FriendshipService
 	tokens  *auth.TokenManager
 	db      *pgxpool.Pool
+	hub     *Hub
 }
 
 func New(authService *service.AuthService, friendshipService *service.FriendshipService, tokens *auth.TokenManager, db *pgxpool.Pool) *Server {
-	return &Server{auth: authService, friends: friendshipService, tokens: tokens, db: db}
+	return &Server{auth: authService, friends: friendshipService, tokens: tokens, db: db, hub: NewHub()}
 }
 
 func (s *Server) Handler() http.Handler {
@@ -42,6 +43,7 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("/api/me/avatar", s.requireAuth(http.HandlerFunc(s.meAvatar)))
 	mux.HandleFunc("/api/avatars/", s.serveAvatar)
 	mux.Handle("/api/users/", s.requireAuth(http.HandlerFunc(s.userRoutes)))
+	mux.Handle("/api/events", s.requireAuth(http.HandlerFunc(s.events)))
 	mux.Handle("/api/dm", s.requireAuth(http.HandlerFunc(s.dmRoutes)))
 	mux.Handle("/api/dm/", s.requireAuth(http.HandlerFunc(s.dmRoutes)))
 	mux.Handle("/api/spaces", s.requireAuth(http.HandlerFunc(s.emptyList)))

@@ -414,6 +414,14 @@ export const mockApi = {
         return (state.dm[userId] || []).map((message) => ({ ...message }))
     },
 
+    async markDmRead() {
+        return { ok: true, count: 0 }
+    },
+
+    async getDmUnread() {
+        return { total: 0, byUser: {} }
+    },
+
     async sendDm(userId, content) {
         await wait(150)
 

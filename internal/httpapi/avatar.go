@@ -159,6 +159,7 @@ func saveAvatarFile(id uuid.UUID, data []byte) error {
 	}
 	return nil
 }
+
 func processAvatar(data []byte) ([]byte, error) {
 	switch http.DetectContentType(data) {
 	case "image/jpeg", "image/png":

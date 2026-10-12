@@ -9,6 +9,7 @@ import EmptyState from '@/components/EmptyState'
 import MessageItem from '@/components/MessageItem'
 import MessageComposer from '@/components/MessageComposer'
 import { api } from '@/api'
+import { useNotifications } from '@/context/NotificationsContext'
 import { useI18n } from '@/i18n'
 
 export function DmList() {
@@ -34,6 +35,31 @@ export function DmList() {
     useEffect(() => {
         load()
     }, [load])
+
+    // Новые сообщения и «прочитано» обновляют список без перезагрузки страницы.
+    const { subscribe, unread } = useNotifications()
+
+    useEffect(() => subscribe((event) => {
+        if (event.type === 'message' || event.type === 'reconnected') {
+            api.getDmConversations()
+                .then((result) => Array.isArray(result) && setConversations(result))
+                .catch(() => {})
+        }
+    }), [subscribe])
+
+    const lastLabel = (last) => {
+        if (!last) return t('dm.noMessages')
+        if (last.text) return last.text
+
+        switch (last.attachmentKind) {
+            case 'voice': return t('attach.voiceMessage')
+            case 'image': return t('attach.photo')
+            case 'video': return t('attach.video')
+            case 'audio': return t('attach.audio')
+            case 'file': return t('attach.file')
+            default: return t('dm.noMessages')
+        }
+    }
 
     return (
         <div className="app-layout">
@@ -85,9 +111,16 @@ export function DmList() {
                                             {conversation.displayName || conversation.name}
                                         </div>
                                         <div className="friend-row__status">
-                                            {conversation.last?.text || t('dm.noMessages')}
+                                            {conversation.last?.fromMe ? `${t('dm.you')}: ` : ''}
+                                            {lastLabel(conversation.last)}
                                         </div>
                                     </div>
+
+                                    {(unread[conversation.userId] ?? conversation.unread) > 0 && (
+                                        <span className="badge" aria-label={t('dm.unread')}>
+                                            {unread[conversation.userId] ?? conversation.unread}
+                                        </span>
+                                    )}
                                 </Link>
                             ))}
                         </div>
@@ -100,7 +133,8 @@ export function DmList() {
     )
 }
 
-const POLL_MS = 4000
+// Запасной опрос на случай, когда поток событий недоступен.
+const POLL_MS = 15000
 
 const formatTime = (message) => {
     if (!message?.createdAt) return message?.time || ''
@@ -151,38 +185,82 @@ export function DmChat() {
         load()
     }, [load])
 
-    // Пока нет WebSocket, подтягиваем новые сообщения периодическим опросом.
+    const { subscribe, markRead, connected } = useNotifications()
+
+    const refetch = useCallback(async () => {
+        try {
+            const result = await api.getDmMessages(userId)
+
+            if (!Array.isArray(result)) return
+
+            setMessages((previous) => {
+                const same =
+                    result.length === previous.length &&
+                    result.every((m, i) => m.id === previous[i].id && m.status === previous[i].status)
+
+                return same ? previous : result.map(normalize)
+            })
+        } catch {
+            // временная ошибка сети: попробуем позже
+        }
+    }, [userId])
+
+    // Входящие сообщения и отметки «прочитано» приходят по SSE.
+    useEffect(() => subscribe((event) => {
+        if (event.type === 'reconnected') {
+            refetch()
+            return
+        }
+
+        if (event.type === 'message') {
+            const { message } = event.data || {}
+            const peerId = message?.authorId === 'me' ? message?.recipientId : message?.senderId
+
+            if (!message || peerId !== userId) return
+
+            setMessages((previous) =>
+                previous.some((item) => item.id === message.id)
+                    ? previous
+                    : [...previous, normalize(message)]
+            )
+        }
+
+        if (event.type === 'read' && event.data?.peerId === userId) {
+            const ids = new Set(event.data.ids)
+
+            setMessages((previous) =>
+                previous.map((m) =>
+                    ids.has(m.id) ? { ...m, status: 'read', readAt: event.data.readAt } : m
+                )
+            )
+        }
+    }), [subscribe, userId, refetch])
+
+    // Открыли чат — всё, что пришло, считается прочитанным (и при возврате на вкладку).
     useEffect(() => {
         if (loading || error) return undefined
 
-        let alive = true
+        const mark = () => {
+            if (document.visibilityState === 'visible') markRead(userId)
+        }
 
-        const timer = setInterval(async () => {
-            try {
-                const result = await api.getDmMessages(userId)
-
-                if (!alive || !Array.isArray(result)) return
-
-                setMessages((previous) => {
-                    const lastNew = result[result.length - 1]?.id
-                    const lastOld = previous[previous.length - 1]?.id
-
-                    if (lastNew === lastOld && result.length === previous.length) {
-                        return previous
-                    }
-
-                    return result.map(normalize)
-                })
-            } catch {
-                // временная ошибка сети: попробуем в следующий тик
-            }
-        }, POLL_MS)
+        mark()
+        window.addEventListener('focus', mark)
+        document.addEventListener('visibilitychange', mark)
 
         return () => {
-            alive = false
-            clearInterval(timer)
+            window.removeEventListener('focus', mark)
+            document.removeEventListener('visibilitychange', mark)
         }
-    }, [userId, loading, error])
+    }, [userId, loading, error, markRead])
+
+    useEffect(() => {
+        if (loading || error || connected) return undefined
+
+        const timer = setInterval(refetch, POLL_MS)
+
+        return () => clearInterval(timer)
+    }, [loading, error, connected, refetch])
 
     useEffect(() => {
         const lastId = messages[messages.length - 1]?.id
@@ -193,11 +271,11 @@ export function DmChat() {
         }
     }, [messages])
 
-    const send = async (text) => {
+    const send = async (text, options) => {
         setSendError('')
 
         try {
-            const message = await api.sendDm(userId, text)
+            const message = await api.sendDm(userId, text, options)
 
             setMessages((previous) =>
                 previous.some((item) => item.id === message.id)
@@ -281,6 +359,7 @@ export function DmChat() {
                     placeholder={t('messages.placeholder')}
                     onSend={send}
                     disabled={loading || !!error}
+                    allowAttachments
                 />
             </main>
 

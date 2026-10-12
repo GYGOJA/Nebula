@@ -1,5 +1,6 @@
 import { useI18n } from '@/i18n'
 import { assetUrl } from '@/api/client'
+import MessageAttachments from './MessageAttachment'
 
 export default function MessageItem({ message, author }) {
     const { t } = useI18n()
@@ -28,6 +29,18 @@ export default function MessageItem({ message, author }) {
 
                 {message.text && (
                     <div className="message__text">{message.text}</div>
+                )}
+
+                <MessageAttachments attachments={message.attachments} />
+
+                {isSelf && message.status && (
+                    <span
+                        className={`message__status ${message.status === 'read' ? 'message__status--read' : ''}`}
+                        title={message.status === 'read' ? t('attach.statusRead') : t('attach.statusSent')}
+                        aria-label={message.status === 'read' ? t('attach.statusRead') : t('attach.statusSent')}
+                    >
+                        {message.status === 'read' ? '✓✓' : '✓'}
+                    </span>
                 )}
 
                 {message.code && (

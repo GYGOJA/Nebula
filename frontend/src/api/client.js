@@ -12,7 +12,6 @@ const API_ORIGIN = (() => {
     }
 })()
 
-
 export const assetUrl = (url) =>
     typeof url === 'string' && url.startsWith('/api/') ? API_ORIGIN + url : url
 
@@ -219,4 +218,176 @@ export const http = {
             ...options,
             method: 'DELETE',
         }),
+}
+
+
+export function uploadWithProgress(path, formData, { onProgress, signal } = {}) {
+    return new Promise((resolve, reject) => {
+        const token = session.getToken()
+        const xhr = new XMLHttpRequest()
+
+        xhr.open('POST', `${API_URL}${path}`)
+        if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`)
+        xhr.setRequestHeader('Accept', 'application/json')
+
+        xhr.upload.onprogress = (event) => {
+            if (event.lengthComputable) onProgress?.(event.loaded / event.total)
+        }
+
+        xhr.onerror = () =>
+            reject(new ApiError(t('errors.network'), { code: 'NETWORK_ERROR' }))
+
+        xhr.onabort = () =>
+            reject(new ApiError('', { code: 'ABORTED' }))
+
+        xhr.onload = () => {
+            let data = null
+
+            try {
+                data = xhr.responseText ? JSON.parse(xhr.responseText) : null
+            } catch {
+                data = xhr.responseText
+            }
+
+            if (xhr.status >= 200 && xhr.status < 300) {
+                resolve(data)
+                return
+            }
+
+            if (xhr.status === 401 && token) {
+                window.dispatchEvent(new Event(UNAUTHORIZED_EVENT))
+            }
+
+            const code = extractCode(data)
+
+            reject(new ApiError(extractMessage(data, xhr.status, code), {
+                status: xhr.status,
+                code,
+                data: data && typeof data === 'object' ? data : null,
+            }))
+        }
+
+        signal?.addEventListener('abort', () => xhr.abort(), { once: true })
+        xhr.send(formData)
+    })
+}
+
+const blobCache = new Map()
+
+export async function fetchBlob(url, { download = false } = {}) {
+    const key = `${url}|${download}`
+    if (blobCache.has(key)) return blobCache.get(key)
+
+    const promise = (async () => {
+        const token = session.getToken()
+        const full = assetUrl(url) + (download ? '?download=1' : '')
+
+        let response
+
+        try {
+            response = await fetch(full, {
+                headers: token ? { Authorization: `Bearer ${token}` } : {},
+            })
+        } catch (cause) {
+            throw new ApiError(t('errors.network'), { code: 'NETWORK_ERROR', cause })
+        }
+
+        if (!response.ok) {
+            if (response.status === 401 && token) {
+                window.dispatchEvent(new Event(UNAUTHORIZED_EVENT))
+            }
+
+            throw new ApiError(t('errors.request', { status: response.status }), {
+                status: response.status,
+            })
+        }
+
+        return URL.createObjectURL(await response.blob())
+    })()
+
+    blobCache.set(key, promise)
+    promise.catch(() => blobCache.delete(key))
+
+    return promise
+}
+
+export function subscribeEvents(onEvent, onStatus) {
+    let stopped = false
+    let controller = null
+    let retry = 1000
+
+    const run = async () => {
+        while (!stopped) {
+            const token = session.getToken()
+
+            if (!token) return
+
+            controller = new AbortController()
+
+            try {
+                const response = await fetch(`${API_URL}/events`, {
+                    headers: { Authorization: `Bearer ${token}`, Accept: 'text/event-stream' },
+                    signal: controller.signal,
+                })
+
+                if (response.status === 401) {
+                    window.dispatchEvent(new Event(UNAUTHORIZED_EVENT))
+                    return
+                }
+
+                if (!response.ok || !response.body) throw new Error('sse')
+
+                retry = 1000
+                onStatus?.(true)
+
+                const reader = response.body.getReader()
+                const decoder = new TextDecoder()
+                let buffer = ''
+
+                for (;;) {
+                    const { value, done } = await reader.read()
+
+                    if (done) break
+
+                    buffer += decoder.decode(value, { stream: true }).replace(/\r\n/g, '\n')
+
+                    let index
+                    while ((index = buffer.indexOf('\n\n')) >= 0) {
+                        const block = buffer.slice(0, index)
+                        buffer = buffer.slice(index + 2)
+
+                        let type = 'message'
+                        const data = []
+
+                        for (const line of block.split('\n')) {
+                            if (line.startsWith('event:')) type = line.slice(6).trim()
+                            else if (line.startsWith('data:')) data.push(line.slice(5).replace(/^ /, ''))
+                        }
+
+                        if (!data.length) continue
+
+                        try {
+                            onEvent({ type, data: JSON.parse(data.join('\n')) })
+                        } catch {
+                        }
+                    }
+                }
+            } catch {
+            }
+
+            onStatus?.(false)
+
+            if (stopped) return
+
+            await new Promise((resolve) => setTimeout(resolve, retry))
+            retry = Math.min(retry * 2, 15000)
+        }
+    }
+
+    run()
+
+    return () => {
+        stopped = true
+        controller?.abort()
+    }
 }

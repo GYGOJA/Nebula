@@ -4,6 +4,7 @@ import Avatar from './Avatar'
 import { api } from '@/api'
 import { useAuth } from '@/context/AuthContext'
 import { useI18n } from '@/i18n'
+import { useNotifications } from '@/context/NotificationsContext'
 
 const NAV = [
     { to: '/app', labelKey: 'nav.feed', end: true },
@@ -18,6 +19,7 @@ export default function Sidebar() {
     const { t } = useI18n()
     const navigate = useNavigate()
     const { logout } = useAuth()
+    const { totalUnread, unread } = useNotifications()
     const [friends, setFriends] = useState([])
     const [loading, setLoading] = useState(true)
 
@@ -58,6 +60,9 @@ export default function Sidebar() {
                     >
                         <span className="icon-placeholder" aria-hidden="true" />
                         <span>{t(item.labelKey)}</span>
+                        {item.to === '/app/dm' && totalUnread > 0 && (
+                            <span className="badge">{totalUnread}</span>
+                        )}
                     </NavLink>
                 ))}
             </nav>
@@ -95,6 +100,10 @@ export default function Sidebar() {
                             size={32}
                         />
                         <span>{friend.displayName || friend.name}</span>
+
+                        {unread[friend.id] > 0 && (
+                            <span className="badge">{unread[friend.id]}</span>
+                        )}
 
                         {friend.status && (
                             <span

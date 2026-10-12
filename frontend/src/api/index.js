@@ -1,4 +1,4 @@
-import { http, USE_MOCK } from './client'
+import { http, uploadWithProgress, USE_MOCK } from './client'
 import { mockApi } from './mock'
 
 const PUBLIC = { skipAuth: true }
@@ -46,7 +46,23 @@ const realApi = {
     getDmConversations: () => http.get('/dm'),
     getDmPeer:          (id) => http.get(`/dm/${id}`),
     getDmMessages:      (id) => http.get(`/dm/${id}/messages`),
-    sendDm:             (id, text) => http.post(`/dm/${id}/messages`, { text }),
+    sendDm:             (id, text, options = {}) => {
+        const { files = [], voice = false, duration, onProgress, signal } = options
+
+        if (!files.length) return http.post(`/dm/${id}/messages`, { text })
+
+        const form = new FormData()
+        form.append('text', text || '')
+        files.forEach((file) => form.append('files', file, file.name))
+        if (voice) {
+            form.append('voice', '1')
+            if (duration != null) form.append('duration', String(Math.round(duration)))
+        }
+
+        return uploadWithProgress(`/dm/${id}/messages`, form, { onProgress, signal })
+    },
+    markDmRead:         (id) => http.post(`/dm/${id}/read`),
+    getDmUnread:        () => http.get('/dm/unread'),
     getVoiceRooms:      (spaceId) => http.get(
         spaceId ? `/spaces/${spaceId}/voice` : '/voice'
     ),
