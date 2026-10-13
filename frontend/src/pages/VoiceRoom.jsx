@@ -8,6 +8,7 @@ import Avatar from '@/components/Avatar'
 import EmptyState from '@/components/EmptyState'
 import { api } from '@/api'
 import { useI18n } from '@/i18n'
+import Icon from "@/assets/icon/Icon.jsx";
 
 export default function VoiceRoom() {
     const { t } = useI18n()
@@ -91,6 +92,7 @@ export default function VoiceRoom() {
 
                     {!loading && !error && !room && (
                         <EmptyState
+                            icon="volume-2"
                             title={t('voice.notFoundTitle')}
                             description={t('voice.notFoundDesc')}
                         />
@@ -99,7 +101,7 @@ export default function VoiceRoom() {
                     {!loading && !error && room && (
                         <section className="voice-room">
                             <div className="voice-room__status">
-                                <span className="icon-placeholder" aria-hidden="true" />
+                                <Icon name="users" />
                                 <span>
                                     {t('voice.participantsCount', {
                                         count:
@@ -138,6 +140,7 @@ export default function VoiceRoom() {
 
                             {rooms.length === 0 ? (
                                 <EmptyState
+                                    icon="volume-2"
                                     title={t('voice.noRoomsTitle')}
                                     description={t('voice.noRoomsDesc')}
                                 />
@@ -149,7 +152,7 @@ export default function VoiceRoom() {
                                             className="space-channel"
                                             to={`/app/voice/${item.id}`}
                                         >
-                                            <span className="icon-placeholder" aria-hidden="true" />
+                                            <Icon name="volume-2" />
                                             <span>{item.name}</span>
                                         </Link>
                                     ))}

@@ -8,6 +8,7 @@ import Avatar from '@/components/Avatar'
 import EmptyState from '@/components/EmptyState'
 import { api } from '@/api'
 import { useI18n } from '@/i18n'
+import Icon from "@/assets/icon/Icon.jsx";
 
 const TYPES = [
     { value: 'users', labelKey: 'search.typeUsers' },
@@ -110,6 +111,7 @@ export default function Search() {
 
                     {!loading && !error && searched && results.length === 0 && (
                         <EmptyState
+                            icon="search"
                             title={t('search.emptyTitle')}
                             description={t('search.emptyDesc')}
                         />
@@ -148,7 +150,7 @@ export default function Search() {
 
                                     {type === 'spaces' && (
                                         <>
-                                            <span className="icon-placeholder" aria-hidden="true" />
+                                            <Icon name="users" />
                                             <div className="friend-row__info">
                                                 <div className="friend-row__name">
                                                     {item.name}

@@ -1,7 +1,10 @@
+import { useState } from 'react'
 import { useI18n } from '@/i18n'
+import Icon from '@/assets/icon/Icon.jsx'
 
 export default function MessageItem({ message, author }) {
     const { t } = useI18n()
+    const [failedAvatar, setFailedAvatar] = useState(null)
     const isSelf = message.self || message.authorId === 'me'
     const name = author?.name || author?.displayName || t('common.unknownAuthor')
     const avatar = author?.avatar || ''
@@ -9,10 +12,14 @@ export default function MessageItem({ message, author }) {
     return (
         <div className={`message ${isSelf ? 'message--self' : ''}`}>
             <div className="message__avatar">
-                {avatar ? (
-                    <img src={avatar} alt="" />
+                {avatar && avatar !== failedAvatar ? (
+                    <img
+                        src={avatar}
+                        alt=""
+                        onError={() => setFailedAvatar(avatar)}
+                    />
                 ) : (
-                    <span className="icon-placeholder" aria-hidden="true" />
+                    <Icon name="user" />
                 )}
             </div>
 
@@ -40,10 +47,7 @@ export default function MessageItem({ message, author }) {
                                 key={reaction.id ?? index}
                                 className="reaction"
                             >
-                                <span
-                                    className="icon-placeholder"
-                                    aria-hidden="true"
-                                />
+                                <Icon name="smile" />
                                 {' '}
                                 {reaction.count}
                             </span>

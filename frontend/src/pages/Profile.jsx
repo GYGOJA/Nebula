@@ -439,6 +439,7 @@ export default function Profile() {
 
                     {!loading && !profile && !error && (
                         <EmptyState
+                            icon="user"
                             title="Профиль недоступен"
                             description="Не удалось получить данные аккаунта."
                         />

@@ -176,6 +176,7 @@ export default function Friends() {
 
                                 {friends.length === 0 ? (
                                     <EmptyState
+                                        icon="users"
                                         title={t('friends.emptyTitle')}
                                         description={t('friends.emptyDesc')}
                                     />

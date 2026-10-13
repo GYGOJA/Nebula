@@ -31,6 +31,8 @@ export default {
     'nav.newMessage': 'New message',
     'nav.createSpace': 'Create space',
     'nav.logout': 'Log out',
+    'nav.menu': 'Menu',
+    'nav.main': 'Main navigation',
     'errors.network': 'Unable to reach the server',
     'errors.server': 'Server error. Please try again later',
     'errors.request': 'Request error ({status})',

@@ -5,6 +5,7 @@ import RightSidebar from '@/components/RightSidebar'
 import PageHeader from '@/components/PageHeader'
 import { api } from '@/api'
 import { getLanguage, useI18n } from '@/i18n'
+import CustomSelect from '@/components/CustomSelect'
 
 const DEFAULT_SETTINGS = {
     theme: 'dark',
@@ -270,27 +271,17 @@ export default function Settings() {
                                             {t('settings.theme')}
                                         </label>
 
-                                        <select
-                                            id="settings-theme"
-                                            className="input"
+                                        <CustomSelect
+                                            className="settings-custom-select"
+                                            ariaLabel={t('settings.theme')}
                                             value={settings.theme || 'dark'}
-                                            onChange={(event) =>
-                                                updatePreference(
-                                                    'theme',
-                                                    event.target.value
-                                                )
-                                            }
-                                        >
-                                            <option value="dark">
-                                                {t('settings.themeDark')}
-                                            </option>
-                                            <option value="light">
-                                                {t('settings.themeLight')}
-                                            </option>
-                                            <option value="system">
-                                                {t('settings.themeSystem')}
-                                            </option>
-                                        </select>
+                                            onChange={(value) => updatePreference('theme', value)}
+                                            options={[
+                                                { value: 'dark', label: t('settings.themeDark') },
+                                                { value: 'light', label: t('settings.themeLight') },
+                                                { value: 'system', label: t('settings.themeSystem') },
+                                            ]}
+                                        />
                                     </div>
 
                                     <div className="profile-form__field">
@@ -298,26 +289,13 @@ export default function Settings() {
                                             {t('settings.language')}
                                         </label>
 
-                                        <select
-                                            id="settings-language"
-                                            className="input"
+                                        <CustomSelect
+                                            className="settings-custom-select"
+                                            ariaLabel={t('settings.language')}
                                             value={language}
-                                            onChange={(event) =>
-                                                updatePreference(
-                                                    'language',
-                                                    event.target.value
-                                                )
-                                            }
-                                        >
-                                            {languages.map((item) => (
-                                                <option
-                                                    key={item.code}
-                                                    value={item.code}
-                                                >
-                                                    {item.label}
-                                                </option>
-                                            ))}
-                                        </select>
+                                            onChange={(value) => updatePreference('language', value)}
+                                            options={languages.map((item) => ({ value: item.code, label: item.label }))}
+                                        />
                                     </div>
                                 </section>
 

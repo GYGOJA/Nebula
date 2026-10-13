@@ -1,4 +1,5 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom'
+import { useAuth } from '@/context/AuthContext'
 
 import AuthLayout from '@/components/AuthLayout'
 import AppLayout from '@/components/AppLayout'
@@ -32,10 +33,15 @@ import {
 
 import VoiceRoom from '@/pages/VoiceRoom'
 
+function RootRedirect() {
+    const { isAuthenticated } = useAuth()
+    return <Navigate to={isAuthenticated ? '/app' : '/login'} replace />
+}
+
 export const router = createBrowserRouter([
     {
         path: '/',
-        element: <Navigate to="/app" replace />,
+        element: <RootRedirect />,
     },
     {
         element: <AuthLayout />,

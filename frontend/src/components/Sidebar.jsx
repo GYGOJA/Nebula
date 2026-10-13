@@ -4,14 +4,16 @@ import Avatar from './Avatar'
 import { api } from '@/api'
 import { useAuth } from '@/context/AuthContext'
 import { useI18n } from '@/i18n'
+import { navPanel, useNavPanel } from '@/utils/navPanel'
+import Icon from "@/assets/icon/Icon.jsx";
 
 const NAV = [
-    { to: '/app', labelKey: 'nav.feed', end: true },
-    { to: '/app/search', labelKey: 'nav.search' },
-    { to: '/app/friends', labelKey: 'nav.friends' },
-    { to: '/app/dm', labelKey: 'nav.messages' },
-    { to: '/app/profile', labelKey: 'nav.profile' },
-    { to: '/app/settings', labelKey: 'nav.settings' },
+    { to: '/app', labelKey: 'nav.feed', icon: 'house', end: true },
+    { to: '/app/search', labelKey: 'nav.search', icon: 'search' },
+    { to: '/app/friends', labelKey: 'nav.friends', icon: 'users' },
+    { to: '/app/dm', labelKey: 'nav.messages', icon: 'message-square' },
+    { to: '/app/profile', labelKey: 'nav.profile', icon: 'user' },
+    { to: '/app/settings', labelKey: 'nav.settings', icon: 'settings' },
 ]
 
 export default function Sidebar() {
@@ -20,6 +22,23 @@ export default function Sidebar() {
     const { logout } = useAuth()
     const [friends, setFriends] = useState([])
     const [loading, setLoading] = useState(true)
+    const panelOpen = useNavPanel()
+
+    // Slide-over panel (tablet): start closed on every page and close on Escape.
+    useEffect(() => {
+        navPanel.close()
+    }, [])
+
+    useEffect(() => {
+        if (!panelOpen) return undefined
+
+        const onKeyDown = (event) => {
+            if (event.key === 'Escape') navPanel.close()
+        }
+
+        window.addEventListener('keydown', onKeyDown)
+        return () => window.removeEventListener('keydown', onKeyDown)
+    }, [panelOpen])
 
     useEffect(() => {
         let alive = true
@@ -40,8 +59,25 @@ export default function Sidebar() {
         }
     }, [])
 
+    const openDm = (id) => {
+        navPanel.close()
+        navigate(`/app/dm/${id}`)
+    }
+
     return (
-        <aside className="sidebar">
+        <>
+        <button
+            type="button"
+            className={`sidebar-backdrop${panelOpen ? ' is-open' : ''}`}
+            aria-label={t('nav.menu')}
+            tabIndex={-1}
+            onClick={navPanel.close}
+        />
+
+        <aside
+            id="app-sidebar"
+            className={`sidebar${panelOpen ? ' sidebar--open' : ''}`}
+        >
             <h2 className="sidebar__title">{t('nav.home')}</h2>
 
             <nav className="sidebar__nav">
@@ -50,13 +86,14 @@ export default function Sidebar() {
                         key={item.to}
                         to={item.to}
                         end={item.end}
+                        onClick={navPanel.close}
                         className={({ isActive }) =>
                             `sidebar__item ${
                                 isActive ? 'sidebar__item--active' : ''
                             }`
                         }
                     >
-                        <span className="icon-placeholder" aria-hidden="true" />
+                        <Icon name={item.icon} />
                         <span>{t(item.labelKey)}</span>
                     </NavLink>
                 ))}
@@ -67,11 +104,16 @@ export default function Sidebar() {
 
                 <button
                     type="button"
-                    className="icon-placeholder icon-placeholder--button"
+                    className="icon-button"
                     title={t('nav.newMessage')}
                     aria-label={t('nav.newMessage')}
-                    onClick={() => navigate('/app/dm')}
-                />
+                    onClick={() => {
+                        navPanel.close()
+                        navigate('/app/dm')
+                    }}
+                >
+                    <Icon name="plus" />
+                </button>
             </div>
 
             {loading && (
@@ -87,7 +129,12 @@ export default function Sidebar() {
                     <li
                         key={friend.id}
                         className="sidebar__dm"
-                        onClick={() => navigate(`/app/dm/${friend.id}`)}
+                        role="link"
+                        tabIndex={0}
+                        onClick={() => openDm(friend.id)}
+                        onKeyDown={(event) => {
+                            if (event.key === 'Enter') openDm(friend.id)
+                        }}
                     >
                         <Avatar label={friend.avatar} size={32} />
                         <span>{friend.name}</span>
@@ -110,8 +157,10 @@ export default function Sidebar() {
                 className="sidebar__logout"
                 onClick={logout}
             >
-                {t('nav.logout')}
+                <Icon name="log-out" />
+                <span>{t('nav.logout')}</span>
             </button>
         </aside>
+        </>
     )
 }

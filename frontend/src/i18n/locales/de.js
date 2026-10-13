@@ -31,6 +31,8 @@ export default {
     'nav.newMessage': 'Neue Nachricht',
     'nav.createSpace': 'Bereich erstellen',
     'nav.logout': 'Abmelden',
+    'nav.menu': 'Menü',
+    'nav.main': 'Hauptnavigation',
     'errors.network': 'Der Server ist nicht erreichbar',
     'errors.server': 'Serverfehler. Bitte versuchen Sie es später erneut',
     'errors.request': 'Anfragefehler ({status})',

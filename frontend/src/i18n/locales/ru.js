@@ -31,6 +31,8 @@ export default {
     'nav.newMessage': 'Новое сообщение',
     'nav.createSpace': 'Создать пространство',
     'nav.logout': 'Выйти',
+    'nav.menu': 'Меню',
+    'nav.main': 'Основная навигация',
     'errors.network': 'Не удаётся связаться с сервером',
     'errors.server': 'Ошибка сервера. Попробуйте позже',
     'errors.request': 'Ошибка запроса ({status})',

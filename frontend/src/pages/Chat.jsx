@@ -22,7 +22,7 @@ export default function Chat() {
 
     const authorsById = useMemo(() => {
         const map = {
-            me: { name: t('common.you'), avatar: t('common.you') },
+            me: { name: t('common.you'), avatar: '' },
         }
         for (const u of users) map[u.id] = u
         return map

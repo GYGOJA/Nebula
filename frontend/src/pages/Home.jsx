@@ -8,6 +8,7 @@ import Avatar from '@/components/Avatar'
 import EmptyState from '@/components/EmptyState'
 import { api } from '@/api'
 import { useI18n } from '@/i18n'
+import Icon from "@/assets/icon/Icon.jsx";
 
 export default function Home() {
     const { t } = useI18n()
@@ -96,7 +97,7 @@ export default function Home() {
 
                     {!loading && !error && channels.length === 0 && (
                         <EmptyState
-                            icon="#"
+                            icon="hash"
                             title={t('home.noChannelsTitle')}
                             description={t('home.noChannelsDesc')}
                         />
@@ -110,7 +111,9 @@ export default function Home() {
                                     to={`/app/channels/${ch.id}`}
                                     className="channel-card"
                                 >
-                                    <div className="channel-card__icon">#</div>
+                                    <div className="channel-card__icon">
+                                        <Icon name="hash" />
+                                    </div>
 
                                     <div className="channel-card__body">
                                         <div className="channel-card__name">
@@ -154,7 +157,9 @@ export default function Home() {
                                     to={`/app/spaces/${sp.id}`}
                                     className="space-card"
                                 >
-                                    <div className="space-card__art">{sp.emoji}</div>
+                                    <div className="space-card__art">
+                                        {sp.emoji || <Icon name="users" />}
+                                    </div>
                                     <div className="space-card__name">{sp.name}</div>
                                     <div className="space-card__members">
                                         {t('home.members', { count: sp.members })}

@@ -7,6 +7,7 @@ import PageHeader from '@/components/PageHeader'
 import EmptyState from '@/components/EmptyState'
 import { api } from '@/api'
 import { useI18n } from '@/i18n'
+import Icon from "@/assets/icon/Icon.jsx";
 
 export function Spaces() {
     const { t } = useI18n()
@@ -58,6 +59,7 @@ export function Spaces() {
 
                     {!loading && !error && spaces.length === 0 && (
                         <EmptyState
+                            icon="users"
                             title={t('spaces.emptyTitle')}
                             description={t('spaces.emptyDesc')}
                             action={
@@ -79,10 +81,7 @@ export function Spaces() {
                                     key={space.id}
                                     to={`/app/spaces/${space.id}`}
                                 >
-                                    <span
-                                        className="space-card__icon icon-placeholder"
-                                        aria-hidden="true"
-                                    />
+                                    <Icon name="users" className="space-card__icon" />
                                     <span className="space-card__name">
                                         {space.name}
                                     </span>
@@ -249,13 +248,14 @@ export function SpaceDetails() {
                                                 className="space-channel"
                                                 to={`/app/channels/${channel.id}`}
                                             >
-                                                <span className="icon-placeholder" aria-hidden="true" />
+                                                <Icon name="hash" />
                                                 <span>{channel.name}</span>
                                             </Link>
                                         ))}
                                     </div>
                                 ) : (
                                     <EmptyState
+                                        icon="hash"
                                         title={t('home.noChannelsTitle')}
                                         description={t('spaces.noChannelsDesc')}
                                     />
@@ -273,13 +273,14 @@ export function SpaceDetails() {
                                                 className="space-channel"
                                                 to={`/app/voice/${room.id}`}
                                             >
-                                                <span className="icon-placeholder" aria-hidden="true" />
+                                                <Icon name="volume-2" />
                                                 <span>{room.name}</span>
                                             </Link>
                                         ))}
                                     </div>
                                 ) : (
                                     <EmptyState
+                                        icon="volume-2"
                                         title={t('spaces.noVoiceTitle')}
                                         description={t('spaces.noVoiceDesc')}
                                     />

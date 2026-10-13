@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useI18n } from '@/i18n'
+import Icon from '@/assets/icon/Icon.jsx'
 
 export default function MessageComposer({
                                             placeholder,
@@ -55,7 +56,7 @@ export default function MessageComposer({
                     title={t('messages.send')}
                     aria-label={t('messages.sendLabel')}
                 >
-                    <span className="icon-placeholder" aria-hidden="true" />
+                    <Icon name="send" />
                 </button>
             </div>
         </div>

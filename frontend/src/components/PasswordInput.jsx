@@ -1,31 +1,6 @@
 import { useState } from 'react'
 import { useI18n } from '@/i18n'
-
-function EyeIcon({ className }) {
-    return (
-        <svg
-            className={className}
-            viewBox="0 0 24 24"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-            aria-hidden="true"
-        >
-            <path
-                d="M2.5 12C2.5 12 6 6.5 12 6.5C18 6.5 21.5 12 21.5 12C21.5 12 18 17.5 12 17.5C6 17.5 2.5 12 2.5 12Z"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                strokeLinejoin="round"
-            />
-            <circle
-                cx="12"
-                cy="12"
-                r="2.8"
-                stroke="currentColor"
-                strokeWidth="1.8"
-            />
-        </svg>
-    )
-}
+import Icon from "@/assets/icon/Icon.jsx";
 
 export default function PasswordInput({
                                           variant = 'login',
@@ -50,7 +25,7 @@ export default function PasswordInput({
                     aria-label={label}
                     onClick={toggle}
                 >
-                    <EyeIcon />
+                    <Icon name={visible ? 'eye-off' : 'eye'} />
                 </button>
             </div>
         )
@@ -68,7 +43,7 @@ export default function PasswordInput({
                 aria-label={label}
                 onClick={toggle}
             >
-                <EyeIcon className="eye-icon" />
+                <Icon name={visible ? 'eye-off' : 'eye'} />
             </button>
         </div>
     )

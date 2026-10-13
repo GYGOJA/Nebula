@@ -61,6 +61,7 @@ export function DmList() {
 
                     {!loading && !error && conversations.length === 0 && (
                         <EmptyState
+                            icon="message-square"
                             title={t('dm.emptyTitle')}
                             description={t('dm.emptyDesc')}
                         />
@@ -193,6 +194,7 @@ export function DmChat() {
 
                     {!loading && !error && messages.length === 0 && (
                         <EmptyState
+                            icon="message-square"
                             title={t('dm.chatEmptyTitle')}
                             description={t('dm.chatEmptyDesc')}
                         />

@@ -105,6 +105,7 @@ export default function RightSidebar({ roomId }) {
 
                     {!room && (
                         <EmptyState
+                            icon="volume-2"
                             title={t('rightbar.noRoomTitle')}
                             description={t('rightbar.noRoomDesc')}
                         />
@@ -112,6 +113,7 @@ export default function RightSidebar({ roomId }) {
 
                     {room && participants.length === 0 && (
                         <EmptyState
+                            icon="users"
                             title={t('common.noOneYet')}
                             description={t('rightbar.emptyRoomDesc')}
                         />
@@ -148,6 +150,7 @@ export default function RightSidebar({ roomId }) {
 
             {!loading && !error && tab === 'threads' && (
                 <EmptyState
+                    icon="git-branch"
                     title={t('rightbar.noThreadsTitle')}
                     description={t('rightbar.noThreadsDesc')}
                 />
@@ -155,6 +158,7 @@ export default function RightSidebar({ roomId }) {
 
             {!loading && !error && tab === 'files' && (
                 <EmptyState
+                    icon="folder"
                     title={t('rightbar.noFilesTitle')}
                     description={t('rightbar.noFilesDesc')}
                 />
