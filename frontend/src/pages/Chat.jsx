@@ -1,7 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, useParams } from 'react-router-dom'
-import NavigationRail from '@/components/NavigationRail'
-import Sidebar from '@/components/Sidebar'
 import RightSidebar from '@/components/RightSidebar'
 import MessageList from '@/components/MessageList'
 import MessageComposer from '@/components/MessageComposer'
@@ -63,8 +61,6 @@ export default function Chat() {
 
     return (
         <div className="app-layout">
-            <NavigationRail activeSpaceId={channel?.spaceId} />
-            <Sidebar />
 
             <main className="chat">
                 <header className="chat__header">

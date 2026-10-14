@@ -1,38 +1,42 @@
 import { useSyncExternalStore } from 'react'
 
-/*
- * Tiny shared store for the slide-over navigation panel used on tablets.
- * The rail (toggle button) and the sidebar (panel) are siblings rendered by
- * every page, so they share the open/closed state through this module.
- */
-let open = false
-const listeners = new Set()
+function createPanel() {
+    let open = false
+    const listeners = new Set()
+    const emit = () => listeners.forEach((listener) => listener())
 
-const emit = () => listeners.forEach((listener) => listener())
+    const panel = {
+        get: () => open,
 
-export const navPanel = {
-    get: () => open,
+        set(value) {
+            if (open === value) return
+            open = value
+            emit()
+        },
 
-    set(value) {
-        if (open === value) return
-        open = value
-        emit()
-    },
+        toggle() {
+            panel.set(!open)
+        },
 
-    toggle() {
-        navPanel.set(!open)
-    },
+        close() {
+            panel.set(false)
+        },
 
-    close() {
-        navPanel.set(false)
-    },
+        subscribe(listener) {
+            listeners.add(listener)
+            return () => listeners.delete(listener)
+        },
+    }
 
-    subscribe(listener) {
-        listeners.add(listener)
-        return () => listeners.delete(listener)
-    },
+    return panel
 }
 
-export function useNavPanel() {
-    return useSyncExternalStore(navPanel.subscribe, navPanel.get, () => false)
+export const navPanel = createPanel()
+export const rightPanel = createPanel()
+
+export function usePanel(panel) {
+    return useSyncExternalStore(panel.subscribe, panel.get, () => false)
 }
+
+export const useNavPanel = () => usePanel(navPanel)
+export const useRightPanel = () => usePanel(rightPanel)

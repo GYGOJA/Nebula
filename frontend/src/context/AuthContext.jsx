@@ -21,6 +21,16 @@ export function AuthProvider({ children }) {
         setUser(null)
     }, [])
 
+    const updateUser = useCallback((patch) => {
+        setUser((previous) => {
+            if (!previous) return previous
+
+            const next = { ...previous, ...patch }
+            session.save(session.getToken(), next)
+            return next
+        })
+    }, [])
+
     const startSession = useCallback((payload) => {
         const { user: nextUser, token } = payload || {}
 
@@ -66,8 +76,9 @@ export function AuthProvider({ children }) {
             login,
             register,
             logout,
+            updateUser,
         }),
-        [user, login, register, logout]
+        [user, login, register, logout, updateUser]
     )
 
     return <AuthCtx.Provider value={value}>{children}</AuthCtx.Provider>

@@ -1,7 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import NavigationRail from '@/components/NavigationRail'
-import Sidebar from '@/components/Sidebar'
 import RightSidebar from '@/components/RightSidebar'
 import PageHeader from '@/components/PageHeader'
 import EmptyState from '@/components/EmptyState'
@@ -35,8 +33,6 @@ export function Spaces() {
 
     return (
         <div className="app-layout">
-            <NavigationRail />
-            <Sidebar />
 
             <main className="main">
                 <div className="main__content">
@@ -129,8 +125,6 @@ export function CreateSpace() {
 
     return (
         <div className="app-layout">
-            <NavigationRail />
-            <Sidebar />
 
             <main className="main">
                 <div className="main__content">
@@ -209,8 +203,6 @@ export function SpaceDetails() {
 
     return (
         <div className="app-layout">
-            <NavigationRail activeSpaceId={id} />
-            <Sidebar />
 
             <main className="main">
                 <div className="main__content">

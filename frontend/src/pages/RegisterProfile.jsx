@@ -272,7 +272,6 @@ function ProfileForm({ email, ticket }) {
                 </button>
 
                 <div className="profile-foot">
-                    <Progress step={3} style={{ margin: 0 }} />
                     <span className="muted">
                         {t('registerProfile.afterNote')}
                     </span>

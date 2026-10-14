@@ -174,6 +174,25 @@ export const mockApi = {
         return { ok: true }
     },
 
+    async changeEmail({ email, password }) {
+        await wait()
+
+        const next = String(email || '').trim().toLowerCase()
+
+        if (!next || !password) fail(t('mock.fillFields'))
+
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(next)) {
+            fail(t('validation.emailInvalid'))
+        }
+
+        if (state.users.some((user) => user.email?.toLowerCase() === next)) {
+            fail(t('settings.emailTaken'))
+        }
+
+        state.profile = { ...state.profile, email: next }
+        return { ok: true, email: next, user: { ...state.profile } }
+    },
+
     async getSpaces() {
         await wait()
         return state.spaces.map((space) => ({ ...space }))

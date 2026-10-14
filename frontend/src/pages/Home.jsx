@@ -1,7 +1,5 @@
-import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
-import Sidebar from '@/components/Sidebar'
-import NavigationRail from '@/components/NavigationRail'
+import { useEffect, useMemo, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import RightSidebar from '@/components/RightSidebar'
 import InviteDialog from '@/components/InviteDialog'
 import Avatar from '@/components/Avatar'
@@ -12,6 +10,8 @@ import Icon from "@/assets/icon/Icon.jsx";
 
 export default function Home() {
     const { t } = useI18n()
+    const navigate = useNavigate()
+    const [query, setQuery] = useState('')
     const [channels, setChannels] = useState([])
     const [spaces, setSpaces] = useState([])
     const [friends, setFriends] = useState([])
@@ -44,18 +44,54 @@ export default function Home() {
         load()
     }, [])
 
+    const term = query.trim()
+    const needle = term.toLowerCase()
+
+    const shown = useMemo(() => {
+        if (!needle) return { channels, spaces, friends }
+
+        const has = (...values) =>
+            values.some((value) => String(value ?? '').toLowerCase().includes(needle))
+
+        return {
+            channels: channels.filter((item) => has(item.name, item.desc)),
+            spaces: spaces.filter((item) => has(item.name, item.description)),
+            friends: friends.filter((item) => has(item.name, item.username)),
+        }
+    }, [needle, channels, spaces, friends])
+
+    const nothingFound =
+        Boolean(needle) &&
+        !loading &&
+        shown.channels.length + shown.spaces.length + shown.friends.length === 0
+
+    const openFullSearch = (event) => {
+        event?.preventDefault()
+        if (!term) return
+        navigate(`/app/search?q=${encodeURIComponent(term)}`)
+    }
+
     return (
         <div className="app-layout">
-            <NavigationRail />
-            <Sidebar />
 
             <main className="main">
                 <div className="main__topbar">
-                    <input
-                        className="main__search"
-                        placeholder={t('home.searchPlaceholder')}
-                        readOnly
-                    />
+                    <form
+                        className="main__search-form"
+                        role="search"
+                        onSubmit={openFullSearch}
+                    >
+                        <input
+                            className="main__search"
+                            type="search"
+                            enterKeyHint="search"
+                            autoComplete="off"
+                            placeholder={t('home.searchPlaceholder')}
+                            aria-label={t('home.searchPlaceholder')}
+                            value={query}
+                            onChange={(event) => setQuery(event.target.value)}
+                        />
+                    </form>
 
                     <nav className="main__tabs">
                         <span className="main__tab main__tab--active">
@@ -81,6 +117,28 @@ export default function Home() {
                 <div className="main__content">
                     <h1 className="main__hello">{t('home.greeting')}</h1>
 
+                    {term && (
+                        <div className="feed-search-note" role="status">
+                            <span>{t('home.searchResults', { query: term })}</span>
+
+                            <button
+                                type="button"
+                                className="feed-search-note__btn"
+                                onClick={openFullSearch}
+                            >
+                                {t('home.searchEverywhere')}
+                            </button>
+                        </div>
+                    )}
+
+                    {nothingFound && (
+                        <EmptyState
+                            icon="search"
+                            title={t('home.searchNothingTitle')}
+                            description={t('home.searchNothingDesc')}
+                        />
+                    )}
+
                     {loading && <p className="muted">{t('common.loading')}</p>}
 
                     {error && (
@@ -95,7 +153,7 @@ export default function Home() {
                         </>
                     )}
 
-                    {!loading && !error && channels.length === 0 && (
+                    {!loading && !error && !needle && channels.length === 0 && (
                         <EmptyState
                             icon="hash"
                             title={t('home.noChannelsTitle')}
@@ -103,9 +161,9 @@ export default function Home() {
                         />
                     )}
 
-                    {!loading && !error && channels.length > 0 && (
+                    {!loading && !error && shown.channels.length > 0 && (
                         <div className="channels">
-                            {channels.map((ch) => (
+                            {shown.channels.map((ch) => (
                                 <Link
                                     key={ch.id}
                                     to={`/app/channels/${ch.id}`}
@@ -138,6 +196,8 @@ export default function Home() {
                         </div>
                     )}
 
+                    {(!needle || shown.spaces.length > 0) && (
+                    <>
                     <div className="section-head">
                         <h2 className="section-title">{t('home.spacesForYou')}</h2>
                         <Link to="/app/spaces" className="section-more">
@@ -145,13 +205,13 @@ export default function Home() {
                         </Link>
                     </div>
 
-                    {!loading && !error && spaces.length === 0 && (
+                    {!loading && !error && !needle && spaces.length === 0 && (
                         <p className="muted">{t('home.noSpaces')}</p>
                     )}
 
-                    {!loading && !error && spaces.length > 0 && (
+                    {!loading && !error && shown.spaces.length > 0 && (
                         <div className="spaces">
-                            {spaces.map((sp) => (
+                            {shown.spaces.map((sp) => (
                                 <Link
                                     key={sp.id}
                                     to={`/app/spaces/${sp.id}`}
@@ -169,17 +229,22 @@ export default function Home() {
                         </div>
                     )}
 
+                    </>
+                    )}
+
+                    {(!needle || shown.friends.length > 0) && (
+                    <>
                     <h2 className="section-title" style={{ marginTop: 24 }}>
                         {t('nav.friends')}
                     </h2>
 
-                    {!loading && !error && friends.length === 0 && (
+                    {!loading && !error && !needle && friends.length === 0 && (
                         <p className="muted">{t('friends.emptyTitle')}</p>
                     )}
 
-                    {!loading && !error && friends.length > 0 && (
+                    {!loading && !error && shown.friends.length > 0 && (
                         <div className="friends">
-                            {friends.map((f) => (
+                            {shown.friends.map((f) => (
                                 <Link
                                     key={f.id}
                                     to={`/app/dm/${f.id}`}
@@ -197,6 +262,8 @@ export default function Home() {
                                 </Link>
                             ))}
                         </div>
+                    )}
+                    </>
                     )}
                 </div>
             </main>

@@ -3,6 +3,18 @@ import { api } from '@/api'
 import Avatar from './Avatar'
 import EmptyState from './EmptyState'
 import { useI18n } from '@/i18n'
+import { rightPanel, useRightPanel } from '@/utils/navPanel'
+import Icon from "@/assets/icon/Icon.jsx";
+
+const canHover = () =>
+    typeof window !== 'undefined' &&
+    window.matchMedia('(hover: hover) and (pointer: fine)').matches
+
+const TABS = [
+    { id: 'participants', icon: 'users', labelKey: 'rightbar.participants' },
+    { id: 'threads', icon: 'git-branch', labelKey: 'rightbar.threads' },
+    { id: 'files', icon: 'folder', labelKey: 'rightbar.files' },
+]
 
 export default function RightSidebar({ roomId }) {
     const { t } = useI18n()
@@ -11,6 +23,23 @@ export default function RightSidebar({ roomId }) {
     const [participants, setParticipants] = useState([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState('')
+    const panelOpen = useRightPanel()
+    const tabIndex = Math.max(TABS.findIndex((item) => item.id === tab), 0)
+
+    useEffect(() => {
+        rightPanel.close()
+    }, [])
+
+    useEffect(() => {
+        if (!panelOpen) return undefined
+
+        const onKeyDown = (event) => {
+            if (event.key === 'Escape') rightPanel.close()
+        }
+
+        window.addEventListener('keydown', onKeyDown)
+        return () => window.removeEventListener('keydown', onKeyDown)
+    }, [panelOpen])
 
     useEffect(() => {
         let active = true
@@ -47,45 +76,59 @@ export default function RightSidebar({ roomId }) {
         }
     }, [roomId])
 
+    const selectTab = (id) => {
+        setTab(id)
+
+        if (!canHover()) rightPanel.set(true)
+    }
+
     return (
-        <aside className="rightbar">
-            <div className="rightbar__tabs" role="tablist">
-                <button
-                    type="button"
-                    role="tab"
-                    aria-selected={tab === 'participants'}
-                    className={`rightbar__tab ${
-                        tab === 'participants' ? 'rightbar__tab--active' : ''
-                    }`}
-                    onClick={() => setTab('participants')}
-                >
-                    {t('rightbar.participants')}
-                </button>
+        <>
+        <button
+            type="button"
+            className={`rightbar-backdrop${panelOpen ? ' is-open' : ''}`}
+            aria-label={t('rightbar.close')}
+            tabIndex={-1}
+            onClick={rightPanel.close}
+        />
 
-                <button
-                    type="button"
-                    role="tab"
-                    aria-selected={tab === 'threads'}
-                    className={`rightbar__tab ${
-                        tab === 'threads' ? 'rightbar__tab--active' : ''
-                    }`}
-                    onClick={() => setTab('threads')}
-                >
-                    {t('rightbar.threads')}
-                </button>
+        <aside
+            className={`rightbar${panelOpen ? ' rightbar--open' : ''}`}
+            style={{ '--i': tabIndex, '--n': TABS.length }}
+            onMouseLeave={() => {
+                if (canHover()) {
+                    rightPanel.close()
 
+                    const active = document.activeElement
+                    if (active instanceof HTMLElement && active.closest('.rightbar')) {
+                        active.blur()
+                    }
+                }
+            }}
+        >
+            <button
+                type="button"
+                className="rightbar__handle"
+                onClick={rightPanel.toggle}
+                aria-label={t('rightbar.open')}
+                aria-expanded={panelOpen}
+            >
+                <Icon name="users" />
+            </button>
+
+            <div className="rightbar__panel">
+            <div className="rightbar__body">
+            <h2 className="rightbar__title">
+                {t(TABS[tabIndex].labelKey)}
                 <button
                     type="button"
-                    role="tab"
-                    aria-selected={tab === 'files'}
-                    className={`rightbar__tab ${
-                        tab === 'files' ? 'rightbar__tab--active' : ''
-                    }`}
-                    onClick={() => setTab('files')}
+                    className="rightbar__close"
+                    onClick={rightPanel.close}
+                    aria-label={t('rightbar.close')}
                 >
-                    {t('rightbar.files')}
+                    <Icon name="x" />
                 </button>
-            </div>
+            </h2>
 
             {loading && <p className="muted">{t('common.loading')}</p>}
 
@@ -163,6 +206,30 @@ export default function RightSidebar({ roomId }) {
                     description={t('rightbar.noFilesDesc')}
                 />
             )}
+            </div>
+
+            <div className="rightbar__rail" role="tablist" aria-orientation="vertical">
+                <span className="rightbar__slider" aria-hidden="true" />
+
+                {TABS.map((item) => (
+                    <button
+                        key={item.id}
+                        type="button"
+                        role="tab"
+                        aria-selected={tab === item.id}
+                        title={t(item.labelKey)}
+                        className={`rightbar__rail-btn${
+                            tab === item.id ? ' is-active' : ''
+                        }`}
+                        onClick={() => selectTab(item.id)}
+                    >
+                        <Icon name={item.icon} />
+                        <span className="rightbar__rail-label">{t(item.labelKey)}</span>
+                    </button>
+                ))}
+            </div>
+            </div>
         </aside>
+        </>
     )
 }

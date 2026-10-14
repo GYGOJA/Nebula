@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
-import NavigationRail from '@/components/NavigationRail'
-import Sidebar from '@/components/Sidebar'
 import RightSidebar from '@/components/RightSidebar'
 import PageHeader from '@/components/PageHeader'
 import { api } from '@/api'
 import { getLanguage, useI18n } from '@/i18n'
 import CustomSelect from '@/components/CustomSelect'
+import { useAuth } from '@/context/AuthContext'
+import { isEmail } from '@/utils/auth'
 
 const DEFAULT_SETTINGS = {
     theme: 'dark',
@@ -41,7 +41,10 @@ function resolveTheme(theme) {
 
 export default function Settings() {
     const { t, language, languages, setLanguage } = useI18n()
+    const { user, updateUser } = useAuth()
     const [settings, setSettings] = useState(DEFAULT_SETTINGS)
+    const [emailForm, setEmailForm] = useState({ email: '', password: '' })
+    const [emailSaving, setEmailSaving] = useState(false)
     const [passwords, setPasswords] = useState({
         current: '',
         next: '',
@@ -216,6 +219,41 @@ export default function Settings() {
         }
     }
 
+    const changeEmail = async (event) => {
+        event.preventDefault()
+        setError('')
+        setNotice('')
+
+        const next = emailForm.email.trim().toLowerCase()
+
+        if (!isEmail(next)) {
+            setError(t('validation.emailInvalid'))
+            return
+        }
+
+        if (user?.email && next === String(user.email).toLowerCase()) {
+            setError(t('settings.emailSame'))
+            return
+        }
+
+        setEmailSaving(true)
+
+        try {
+            const result = await api.changeEmail({
+                email: next,
+                password: emailForm.password,
+            })
+
+            updateUser({ email: result?.email || next })
+            setEmailForm({ email: '', password: '' })
+            setNotice(t('settings.emailChanged'))
+        } catch (err) {
+            setError(err?.message || t('settings.changeEmailFailed'))
+        } finally {
+            setEmailSaving(false)
+        }
+    }
+
     const notificationLabels = {
         desktop: t('settings.notifications'),
         sounds: t('settings.sounds'),
@@ -229,8 +267,6 @@ export default function Settings() {
 
     return (
         <div className="app-layout">
-            <NavigationRail />
-            <Sidebar />
 
             <main className="main">
                 <div className="main__content profile-page settings-page">
@@ -368,6 +404,75 @@ export default function Settings() {
                                             : t('settings.save')}
                                     </button>
                                 </div>
+                            </form>
+
+                            <form
+                                className="profile-form profile-form--minimal settings-form settings-form--email"
+                                onSubmit={changeEmail}
+                            >
+                                <section className="profile-edit-section">
+                                    <h2>{t('settings.emailSection')}</h2>
+
+                                    <p className="settings-email-current">
+                                        {t('settings.emailCurrent')}{' '}
+                                        <strong>{user?.email || t('settings.emailNotSet')}</strong>
+                                    </p>
+
+                                    <div className="profile-form__field">
+                                        <label htmlFor="email-next">
+                                            {t('settings.emailNew')}
+                                        </label>
+
+                                        <input
+                                            id="email-next"
+                                            className="input"
+                                            type="email"
+                                            autoComplete="email"
+                                            placeholder="name@company.com"
+                                            value={emailForm.email}
+                                            onChange={(event) =>
+                                                setEmailForm((previous) => ({
+                                                    ...previous,
+                                                    email: event.target.value,
+                                                }))
+                                            }
+                                            required
+                                        />
+                                    </div>
+
+                                    <div className="profile-form__field">
+                                        <label htmlFor="email-password">
+                                            {t('settings.emailConfirmPassword')}
+                                        </label>
+
+                                        <input
+                                            id="email-password"
+                                            className="input"
+                                            type="password"
+                                            autoComplete="current-password"
+                                            value={emailForm.password}
+                                            onChange={(event) =>
+                                                setEmailForm((previous) => ({
+                                                    ...previous,
+                                                    password: event.target.value,
+                                                }))
+                                            }
+                                            required
+                                        />
+                                    </div>
+
+                                    <div className="profile-form__actions">
+                                        <button
+                                            className="btn btn--primary"
+                                            type="submit"
+                                            disabled={emailSaving}
+                                        >
+                                            {emailSaving
+                                                ? t('common.saving')
+                                                : t('settings.changeEmail')}
+                                        </button>
+                                    </div>
+                                </section>
                             </form>
 
                             <form

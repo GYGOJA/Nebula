@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import OtpInput from '@/components/OtpInput'
 import Progress from '@/components/Progress'
@@ -16,6 +16,15 @@ function VerifyForm({ email }) {
     const [loading, setLoading] = useState(false)
     const [resending, setResending] = useState(false)
     const [cooldown, setCooldown] = useState(RESEND_SECONDS)
+    const [phase, setPhase] = useState('idle')
+    const mounted = useRef(true)
+
+    useEffect(() => {
+        mounted.current = true
+        return () => {
+            mounted.current = false
+        }
+    }, [])
 
     useEffect(() => {
         if (cooldown <= 0) return undefined
@@ -24,10 +33,11 @@ function VerifyForm({ email }) {
         return () => clearTimeout(id)
     }, [cooldown])
 
-    const busy = loading || resending
+    const busy = loading || resending || (phase !== 'idle' && phase !== 'error')
 
-    const onSubmit = async (e) => {
-        e.preventDefault()
+    const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+
+    const verify = async () => {
         setError('')
 
         if (code.length !== CODE_LENGTH) {
@@ -36,17 +46,36 @@ function VerifyForm({ email }) {
         }
 
         setLoading(true)
+        setPhase('fan')
 
         try {
-            const res = await api.verifyCode({ email, code })
+            const request = api.verifyCode({ email, code })
+            request.catch(() => {})
+
+            await sleep(420)
+            if (!mounted.current) return
+            setPhase('stack')
+
+            await sleep(460)
+            if (!mounted.current) return
+            setPhase('checking')
+
+            const [res] = await Promise.all([request, sleep(700)])
 
             if (!res?.ticket) {
                 throw new Error(t('errors.badResponse'))
             }
 
+            if (!mounted.current) return
+            setPhase('success')
+            await sleep(1100)
+
             pendingRegistration.set({ email, ticket: res.ticket })
             nav('/register/profile')
         } catch (err) {
+            if (!mounted.current) return
+
+            setPhase('error')
             setError(err?.message || t('verify.failed'))
 
             if (typeof err?.data?.attemptsLeft === 'number') {
@@ -54,10 +83,24 @@ function VerifyForm({ email }) {
             }
 
             setCode('')
+            setTimeout(() => {
+                if (mounted.current) setPhase('idle')
+            }, 650)
         } finally {
-            setLoading(false)
+            if (mounted.current) setLoading(false)
         }
     }
+
+    const onSubmit = (e) => {
+        e.preventDefault()
+        if (!busy) verify()
+    }
+
+    useEffect(() => {
+        if (code.length === CODE_LENGTH && phase === 'idle' && !loading && !resending) {
+            verify()
+        }
+    }, [code])
 
     const onResend = async () => {
         setError('')
@@ -81,14 +124,26 @@ function VerifyForm({ email }) {
     const ss = String(cooldown % 60).padStart(2, '0')
 
     return (
-        <section className="auth-card auth-card--otp">
+        <section className="auth-card auth-card--otp" data-phase={phase}>
             <Progress step={2} />
 
-            <h1 className="auth-card__title-otp">{t('verify.title')}</h1>
+            <h1 className="auth-card__title-otp" aria-live="polite">
+                {phase === 'checking' || phase === 'stack'
+                    ? t('verify.checkingTitle')
+                    : phase === 'success'
+                        ? t('verify.successTitle')
+                        : t('verify.title')}
+            </h1>
 
             <p className="auth-card__lead auth-card__lead--otp">
-                {t('auth.codeSent', { email: maskEmail(email) })}{' '}
-                {t('auth.codeValid')}
+                {phase === 'checking' || phase === 'stack'
+                    ? t('verify.checkingLead')
+                    : phase === 'success'
+                        ? t('verify.successLead')
+                        : <>
+                            {t('auth.codeSent', { email: maskEmail(email) })}{' '}
+                            {t('auth.codeValid')}
+                        </>}
             </p>
 
             <form onSubmit={onSubmit}>
@@ -96,7 +151,8 @@ function VerifyForm({ email }) {
                     length={CODE_LENGTH}
                     value={code}
                     onChange={setCode}
-                    disabled={busy}
+                    disabled={resending}
+                    phase={phase}
                 />
 
                 {error && (
@@ -111,7 +167,7 @@ function VerifyForm({ email }) {
                     </p>
                 )}
 
-                <p className="auth-meta">
+                <p className="auth-meta auth-meta--resend">
                     {cooldown > 0 ? (
                         <>
                             {t('verify.resendIn')}{' '}

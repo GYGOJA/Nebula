@@ -1,7 +1,8 @@
-import { useCallback, useEffect } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { RouterProvider } from 'react-router-dom'
 import { router } from './router'
 import { AuthProvider } from './context/AuthContext'
+import SplashScreen from './components/SplashScreen'
 
 function readPreferences() {
     try {
@@ -31,6 +32,9 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
 }
 
 export default function App() {
+    const [booted, setBooted] = useState(false)
+    const handleReady = useCallback(() => setBooted(true), [])
+
     const syncPreferences = useCallback(() => {
         applyPreferences()
     }, [])
@@ -75,7 +79,8 @@ export default function App() {
 
     return (
         <AuthProvider>
-            <RouterProvider router={router} />
+            {booted && <RouterProvider router={router} />}
+            <SplashScreen onReady={handleReady} />
         </AuthProvider>
     )
 }

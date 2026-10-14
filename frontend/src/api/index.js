@@ -15,6 +15,7 @@ const realApi = {
     getSettings:     ()  => http.get('/me/settings'),
     updateSettings:  (p) => http.patch('/me/settings', p),
     changePassword:  (p) => http.post('/me/password', p),
+    changeEmail:     (p) => http.post('/me/email', p),
     getSpaces:       ()  => http.get('/spaces'),
     getSpace:        (id) => http.get(`/spaces/${id}`),
     getChannels:     (spaceId) => http.get(
