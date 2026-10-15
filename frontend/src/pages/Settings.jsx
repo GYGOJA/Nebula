@@ -31,13 +31,22 @@ function readSavedPreferences() {
 }
 
 function resolveTheme(theme) {
-    if (theme !== 'system') {
-        return theme === 'light' ? 'light' : 'dark'
+    if (theme === 'system') {
+        return window.matchMedia('(prefers-color-scheme: light)').matches
+            ? 'light'
+            : 'dark'
     }
 
-    return window.matchMedia('(prefers-color-scheme: light)').matches
-        ? 'light'
-        : 'dark'
+    return String(theme || 'dark').startsWith('light') ? 'light' : 'dark'
+}
+
+function hasMascotBackground(theme) {
+    return String(theme || '').endsWith('-mascot')
+}
+
+function applyAppearance(theme) {
+    document.documentElement.dataset.theme = resolveTheme(theme)
+    document.documentElement.dataset.mascotBackground = hasMascotBackground(theme) ? 'on' : 'off'
 }
 
 export default function Settings() {
@@ -87,7 +96,7 @@ export default function Settings() {
             }
 
             setSettings(merged)
-            document.documentElement.dataset.theme = resolveTheme(merged.theme)
+            applyAppearance(merged.theme)
         } catch (err) {
             setError(err?.message || t('settings.loadFailed'))
         } finally {
@@ -143,7 +152,7 @@ export default function Settings() {
         })
 
         if (key === 'theme') {
-            document.documentElement.dataset.theme = resolveTheme(value)
+            applyAppearance(value)
         }
 
         if (key === 'language') {
@@ -335,9 +344,10 @@ export default function Settings() {
                                             value={settings.theme || 'dark'}
                                             onChange={(value) => updatePreference('theme', value)}
                                             options={[
-                                                { value: 'dark', label: t('settings.themeDark') },
-                                                { value: 'light', label: t('settings.themeLight') },
-                                                { value: 'system', label: t('settings.themeSystem') },
+                                                { value: 'light', label: 'Светлая' },
+                                                { value: 'dark', label: 'Тёмная' },
+                                                { value: 'light-mascot', label: 'Светлая с маскотом' },
+                                                { value: 'dark-mascot', label: 'Тёмная с маскотом' },
                                             ]}
                                         />
                                     </div>

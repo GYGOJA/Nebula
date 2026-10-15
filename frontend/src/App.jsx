@@ -16,15 +16,11 @@ function applyPreferences() {
     const preferences = readPreferences()
     const theme = preferences.theme || 'dark'
 
-    const resolvedTheme =
-        theme === 'system'
-            ? window.matchMedia('(prefers-color-scheme: light)').matches
-                ? 'light'
-                : 'dark'
-            : theme
+    const resolvedTheme = String(theme).startsWith('light') ? 'light' : 'dark'
 
-    document.documentElement.dataset.theme =
-        resolvedTheme === 'light' ? 'light' : 'dark'
+    document.documentElement.dataset.theme = resolvedTheme
+    document.documentElement.dataset.mascotBackground =
+        String(theme).endsWith('-mascot') ? 'on' : 'off'
 }
 
 if (typeof window !== 'undefined' && typeof document !== 'undefined') {

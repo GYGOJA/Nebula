@@ -8469,3 +8469,286 @@ body { background: var(--bg); color: var(--text); }
     .settings-page .settings-email-code-field .otp { gap: 6px; }
     .settings-page .settings-email-code-field .otp__cell { width: min(13vw, 44px); height: 48px; }
 }
+
+
+ :root[data-mascot-background="on"] body {
+    background-color: var(--bg);
+    background-image: none;
+    background-attachment: fixed;
+}
+
+:root[data-mascot-background="on"] body::before {
+    content: none;
+    display: none;
+}
+
+:root[data-mascot-background="on"] body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background-image: url('/mascot-background.png');
+    background-position: center calc(50% + 24px);
+    background-repeat: no-repeat;
+    background-size: min(34.6vw, 455px) auto;
+    opacity: 0.5;
+}
+
+:root[data-mascot-background="on"] #root {
+    position: relative;
+    z-index: 1;
+    background: transparent !important;
+}
+
+@media (max-width: 760px) {
+    :root[data-mascot-background="on"] body::after {
+        background-size: 48.4vw auto;
+        background-position: center center;
+    }
+}
+
+:root[data-mascot-background="on"] .app-layout,
+:root[data-mascot-background="on"] .main,
+:root[data-mascot-background="on"] .chat {
+    background: transparent !important;
+}
+
+
+
+:root[data-mascot-background="on"] .rail,
+:root[data-mascot-background="on"] .sidebar,
+:root[data-mascot-background="on"] .right-sidebar {
+    background-image: none;
+}
+
+
+:root[data-mascot-background="on"] .profile-page,
+:root[data-mascot-background="on"] .settings-page,
+:root[data-mascot-background="on"] .profile-page__main,
+:root[data-mascot-background="on"] .settings-page__content,
+:root[data-mascot-background="on"] .settings-page .settings-content,
+:root[data-mascot-background="on"] .profile-page .profile-page__content {
+    background-color: transparent !important;
+    background-image: none !important;
+}
+
+:root[data-theme="light"][data-mascot-background="on"] .profile-page,
+:root[data-theme="light"][data-mascot-background="on"] .settings-page,
+:root[data-theme="light"][data-mascot-background="on"] .profile-page__main,
+:root[data-theme="light"][data-mascot-background="on"] .settings-page__content,
+:root[data-theme="light"][data-mascot-background="on"] .settings-page .settings-content,
+:root[data-theme="light"][data-mascot-background="on"] .profile-page .profile-page__content {
+    background-color: transparent !important;
+    background-image: none !important;
+}
+
+@media (max-width: 760px) {
+    :root[data-mascot-background="on"] body::after {
+        background-position: center center;
+    }
+}
+
+.rail .rail__btn--active,
+.rail .rail__btn--active:hover {
+    background: var(--nav-bg, #121214);
+    color: var(--nav-accent, #ffb020);
+    border-color: transparent;
+}
+
+:root[data-theme="light"] .rail .rail__btn--active,
+:root[data-theme="light"] .rail .rail__btn--active:hover {
+    background: var(--nav-bg, #ffffff);
+    color: var(--nav-accent, #ffb020);
+    border-color: transparent;
+}
+
+.rightbar__slider,
+.rightbar__slider::before,
+.rightbar__slider::after {
+    background: var(--nav-bg, #121214);
+}
+
+.rightbar__slider::before {
+    background: radial-gradient(circle at 100% 0, transparent 15.5px, var(--nav-bg, #121214) 16px);
+}
+
+.rightbar__slider::after {
+    background: radial-gradient(circle at 100% 100%, transparent 15.5px, var(--nav-bg, #121214) 16px);
+}
+
+.rightbar__rail-btn.is-active,
+.rightbar__rail-btn.is-active:hover {
+    --icon-color: var(--nav-accent, #ffb020);
+    color: var(--nav-accent, #ffb020);
+    background: transparent;
+}
+
+.dock__slider,
+.dock__slider::before,
+.dock__slider::after,
+.rightbar__slider,
+.rightbar__slider::before,
+.rightbar__slider::after {
+    background: var(--nav-bg, #121214);
+}
+
+.dock__link.is-active,
+.dock__link.is-active:hover,
+.rightbar__rail-btn.is-active,
+.rightbar__rail-btn.is-active:hover {
+    --icon-color: var(--nav-accent, #ffb020);
+    color: var(--nav-accent, #ffb020);
+    background: transparent;
+}
+
+.dock__link.is-active .dock__icon,
+.rightbar__rail-btn.is-active .rightbar__rail-icon,
+.rightbar__rail-btn.is-active svg {
+    --icon-color: var(--nav-accent, #ffb020);
+    color: var(--nav-accent, #ffb020);
+}
+
+:root[data-theme="dark"] .dock__link.is-active,
+:root[data-theme="dark"] .dock__link.is-active:hover,
+:root[data-theme="dark"] .rightbar__rail-btn.is-active,
+:root[data-theme="dark"] .rightbar__rail-btn.is-active:hover,
+:root[data-theme="dark"] .rail .rail__btn--active,
+:root[data-theme="dark"] .rail .rail__btn--active:hover {
+    background-color: #050505 !important;
+    color: #ffb020 !important;
+}
+
+:root[data-theme="light"] .dock__link.is-active,
+:root[data-theme="light"] .dock__link.is-active:hover,
+:root[data-theme="light"] .rightbar__rail-btn.is-active,
+:root[data-theme="light"] .rightbar__rail-btn.is-active:hover,
+:root[data-theme="light"] .rail .rail__btn--active,
+:root[data-theme="light"] .rail .rail__btn--active:hover {
+    background-color: #f3f5f9 !important;
+    color: #ffb020 !important;
+}
+
+:root[data-theme="dark"] .dock__link.is-active .dock__label,
+:root[data-theme="dark"] .dock__link.is-active .dock__icon,
+:root[data-theme="dark"] .rightbar__rail-btn.is-active .rightbar__rail-label,
+:root[data-theme="dark"] .rightbar__rail-btn.is-active .rightbar__rail-icon,
+:root[data-theme="dark"] .rightbar__rail-btn.is-active svg,
+:root[data-theme="dark"] .rail .rail__btn--active svg,
+:root[data-theme="dark"] .rail .rail__btn--active .rail__label,
+:root[data-theme="light"] .dock__link.is-active .dock__label,
+:root[data-theme="light"] .dock__link.is-active .dock__icon,
+:root[data-theme="light"] .rightbar__rail-btn.is-active .rightbar__rail-label,
+:root[data-theme="light"] .rightbar__rail-btn.is-active .rightbar__rail-icon,
+:root[data-theme="light"] .rightbar__rail-btn.is-active svg,
+:root[data-theme="light"] .rail .rail__btn--active svg,
+:root[data-theme="light"] .rail .rail__btn--active .rail__label {
+    color: #ffb020 !important;
+    stroke: #ffb020 !important;
+    --icon-color: #ffb020 !important;
+}
+
+
+.rail .rail__btn--active,
+.rail .rail__btn--active:hover {
+    width: 64px;
+    margin-left: 8px;
+    margin-right: 0;
+    border-radius: 24px 0 0 24px;
+    background-color: var(--nav-bg, #121214) !important;
+    color: #ffb020 !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
+}
+
+.rightbar__rail-btn.is-active,
+.rightbar__rail-btn.is-active:hover {
+    width: 64px;
+    margin-left: 0;
+    margin-right: 8px;
+    border-radius: 0 24px 24px 0;
+    background-color: var(--nav-bg, #121214) !important;
+    color: #ffb020 !important;
+    box-shadow: none !important;
+}
+
+:root[data-theme="dark"] .rail .rail__btn--active,
+:root[data-theme="dark"] .rail .rail__btn--active:hover,
+:root[data-theme="dark"] .rightbar__rail-btn.is-active,
+:root[data-theme="dark"] .rightbar__rail-btn.is-active:hover {
+    background-color: #050505 !important;
+}
+
+:root[data-theme="light"] .rail .rail__btn--active,
+:root[data-theme="light"] .rail .rail__btn--active:hover,
+:root[data-theme="light"] .rightbar__rail-btn.is-active,
+:root[data-theme="light"] .rightbar__rail-btn.is-active:hover {
+    background-color: #f3f5f9 !important;
+}
+
+
+.rail .rail__btn--active,
+.rail .rail__btn--active:hover,
+.dock__link.is-active,
+.dock__link.is-active:hover,
+.rightbar__rail-btn.is-active,
+.rightbar__rail-btn.is-active:hover {
+    background: transparent !important;
+    box-shadow: none !important;
+    color: var(--nav-accent, #ffb020) !important;
+}
+
+.dock__slider,
+.dock__slider::before,
+.dock__slider::after,
+.rightbar__slider,
+.rightbar__slider::before,
+.rightbar__slider::after {
+    background-color: var(--nav-page, #050505) !important;
+}
+
+.dock__slider::before {
+    background: radial-gradient(circle at 0 0, transparent 15.5px, var(--nav-page, #050505) 16px) !important;
+}
+
+.dock__slider::after {
+    background: radial-gradient(circle at 0 100%, transparent 15.5px, var(--nav-page, #050505) 16px) !important;
+}
+
+.rightbar__slider::before {
+    background: radial-gradient(circle at 100% 0, transparent 15.5px, var(--nav-page, #050505) 16px) !important;
+}
+
+.rightbar__slider::after {
+    background: radial-gradient(circle at 100% 100%, transparent 15.5px, var(--nav-page, #050505) 16px) !important;
+}
+
+:root[data-theme="dark"] .dock__link.is-active,
+:root[data-theme="dark"] .dock__link.is-active:hover,
+:root[data-theme="dark"] .rightbar__rail-btn.is-active,
+:root[data-theme="dark"] .rightbar__rail-btn.is-active:hover,
+:root[data-theme="dark"] .rail .rail__btn--active,
+:root[data-theme="dark"] .rail .rail__btn--active:hover {
+    background-color: transparent !important;
+}
+
+:root[data-theme="light"] .dock__link.is-active,
+:root[data-theme="light"] .dock__link.is-active:hover,
+:root[data-theme="light"] .rightbar__rail-btn.is-active,
+:root[data-theme="light"] .rightbar__rail-btn.is-active:hover,
+:root[data-theme="light"] .rail .rail__btn--active,
+:root[data-theme="light"] .rail .rail__btn--active:hover {
+    background-color: transparent !important;
+}
+
+.dock__link.is-active .dock__label,
+.dock__link.is-active .dock__icon,
+.rightbar__rail-btn.is-active .rightbar__rail-label,
+.rightbar__rail-btn.is-active .rightbar__rail-icon,
+.rightbar__rail-btn.is-active svg,
+.rail .rail__btn--active svg,
+.rail .rail__btn--active .rail__label {
+    color: #ffb020 !important;
+    stroke: #ffb020 !important;
+    --icon-color: #ffb020 !important;
+}
