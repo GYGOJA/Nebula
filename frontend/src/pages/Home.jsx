@@ -6,10 +6,13 @@ import Avatar from '@/components/Avatar'
 import EmptyState from '@/components/EmptyState'
 import { api } from '@/api'
 import { useI18n } from '@/i18n'
+import { useAuth } from '@/context/AuthContext'
 import Icon from "@/assets/icon/Icon.jsx";
 
 export default function Home() {
     const { t } = useI18n()
+    const { user } = useAuth()
+    const [now, setNow] = useState(() => new Date())
     const navigate = useNavigate()
     const [query, setQuery] = useState('')
     const [channels, setChannels] = useState([])
@@ -44,6 +47,12 @@ export default function Home() {
         load()
     }, [])
 
+    useEffect(() => {
+        const updateTime = () => setNow(new Date())
+        const timer = window.setInterval(updateTime, 60000)
+        return () => window.clearInterval(timer)
+    }, [])
+
     const term = query.trim()
     const needle = term.toLowerCase()
 
@@ -70,6 +79,17 @@ export default function Home() {
         if (!term) return
         navigate(`/app/search?q=${encodeURIComponent(term)}`)
     }
+
+    const hour = now.getHours()
+    const greeting = hour >= 5 && hour < 12
+        ? 'Доброе утро'
+        : hour >= 12 && hour < 17
+            ? 'Добрый день'
+            : hour >= 17 && hour < 22
+                ? 'Добрый вечер'
+                : 'Доброй ночи'
+    const displayName = String(user?.displayName || user?.name || user?.username || '').trim()
+    const greetingText = `${greeting}${displayName ? `, ${displayName}` : ''}`
 
     return (
         <div className="app-layout">
@@ -115,7 +135,7 @@ export default function Home() {
                 </div>
 
                 <div className="main__content">
-                    <h1 className="main__hello">{t('home.greeting')}</h1>
+                    <h1 className="main__hello">{greetingText}</h1>
 
                     {term && (
                         <div className="feed-search-note" role="status">

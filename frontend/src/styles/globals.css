@@ -98,9 +98,6 @@ svg {
     color: #9a9a9d;
 }
 
-
-
-
 .logo {
     display: block;
     user-select: none;
@@ -130,9 +127,6 @@ svg {
         );
     }
 }
-
-
-
 
 .auth-layout {
     position: relative;
@@ -166,23 +160,16 @@ svg {
 .auth-bg {
     position: fixed;
     inset: 0;
-
     z-index: -1;
-
     width: 100%;
-    height: 100%;
-
-    background-image: url('/background.png');
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-    background-color: #050505;
-
+    min-height: 100%;
+    background: radial-gradient(ellipse at 50% 36%, rgba(255, 176, 32, 0.11), transparent 62%), #050505;
     pointer-events: none;
 }
 
-
-
+:root[data-theme="light"] .auth-bg {
+    background: radial-gradient(ellipse at 50% 36%, rgba(255, 176, 32, 0.16), transparent 62%), #f4f6fb;
+}
 
 .auth-window {
     position: relative;
@@ -303,9 +290,6 @@ svg {
             0 0 0 2px rgba(255, 178, 28, 0.08);
 }
 
-
-
-
 .password-wrapper {
     position: relative;
 
@@ -370,9 +354,6 @@ svg {
 .forgot-password:hover {
     opacity: 0.75;
 }
-
-
-
 
 .auth-bottom {
     position: absolute;
@@ -463,9 +444,6 @@ svg {
     user-select: none;
     pointer-events: none;
 }
-
-
-
 
 .auth-card {
     width: min(563px, calc(100vw - 32px));
@@ -567,9 +545,6 @@ svg {
     color: #ffb72e;
 }
 
-
-
-
 .auth-card__title--narrow,
 .auth-card--otp .auth-card__title-otp {
     margin: 0 0 12px;
@@ -619,9 +594,6 @@ svg {
     font-size: 14px;
     line-height: 1.25;
 }
-
-
-
 
 .auth-input {
     display: block;
@@ -686,9 +658,6 @@ svg {
     color: var(--danger);
 }
 
-
-
-
 .auth-btn {
     width: 100%;
     min-height: 41px;
@@ -736,9 +705,6 @@ svg {
     font-size: 16px;
 }
 
-
-
-
 .auth-bottom.auth-bottom--right,
 .auth-bottom.auth-bottom--center {
     position: static;
@@ -764,9 +730,6 @@ svg {
     text-align: center;
 }
 
-
-
-
 .progress {
     display: flex;
     align-items: center;
@@ -791,9 +754,6 @@ svg {
 .progress__seg--active {
     background: var(--orange);
 }
-
-
-
 
 .codes {
     display: flex;
@@ -851,9 +811,6 @@ svg {
 
     text-align: center;
 }
-
-
-
 
 .profile-title {
     margin: 0 0 4px;
@@ -979,9 +936,6 @@ svg {
     width: 31px;
 }
 
-
-
-
 .field-common {
     display: flex;
     flex-direction: column;
@@ -1044,9 +998,6 @@ svg {
     font-size: 12px;
 }
 
-
-
-
 .btn {
     display: inline-flex;
 
@@ -1103,9 +1054,6 @@ svg {
     border-radius: 15px;
 }
 
-
-
-
 .avatar {
     display: grid;
     place-items: center;
@@ -1159,9 +1107,6 @@ svg {
 .otp__cell:focus {
     border-color: #ffb020;
 }
-
-
-
 
 .app-layout {
     display: grid;
@@ -1240,9 +1185,6 @@ svg {
 
     background: transparent;
 }
-
-
-
 
 .sidebar {
     background: #131313;
@@ -1410,9 +1352,6 @@ svg {
     color: #6f6f6f;
 }
 
-
-
-
 .main {
     min-width: 0;
 
@@ -1510,9 +1449,6 @@ svg {
     font-size: 32px;
     font-weight: 700;
 }
-
-
-
 
 .rightbar {
     background: #131313;
@@ -1641,9 +1577,6 @@ svg {
     font-size: 12px;
 }
 
-
-
-
 .chat {
     display: flex;
     flex-direction: column;
@@ -1759,9 +1692,6 @@ svg {
 .chat__composer-send:hover {
     background: #ffb72e;
 }
-
-
-
 
 .message {
     display: flex;
@@ -1893,9 +1823,6 @@ svg {
 .thread-link:hover {
     color: #ffb72e;
 }
-
-
-
 
 .channels {
     display: grid;
@@ -2107,9 +2034,6 @@ svg {
 .friend-card__status--online {
     color: #ffb020;
 }
-
-
-
 
 .profile-grid__birth {
     grid-column: 1 / -1;
@@ -2621,9 +2545,6 @@ svg {
     font-size: 13px;
 }
 
-
-
-
 .app-chat {
     min-height: 100vh;
 
@@ -2845,9 +2766,6 @@ svg {
 
     color: #888;
 }
-
-
-
 
 @media (max-width: 1100px) {
     .app-layout {
@@ -3209,7 +3127,6 @@ svg {
     color: var(--orange);
 }
 
-
 .empty-state {
     display: flex;
     flex-direction: column;
@@ -3243,7 +3160,6 @@ svg {
     margin-top: 6px;
 }
 
-
 .page-header {
     display: flex;
     align-items: flex-start;
@@ -3271,7 +3187,6 @@ svg {
     gap: 8px;
     align-items: center;
 }
-
 
 .tabs {
     display: flex;
@@ -3312,7 +3227,6 @@ svg {
     font-size: 11px;
     font-weight: 700;
 }
-
 
 .friend-add {
     display: flex;
@@ -3396,7 +3310,6 @@ svg {
     white-space: nowrap;
 }
 
-
 .search-input {
     width: 100%;
     height: 46px;
@@ -3414,7 +3327,6 @@ svg {
     border-color: rgba(255, 178, 28, 0.5);
     box-shadow: 0 0 0 2px rgba(255, 178, 28, 0.08);
 }
-
 
 .settings-panel {
     display: flex;
@@ -3477,7 +3389,6 @@ svg {
     margin: 0;
 }
 
-
 .profile-page {
     display: block;
 }
@@ -3519,7 +3430,6 @@ svg {
     line-height: 1.5;
 }
 
-
 .voice-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
@@ -3552,7 +3462,6 @@ svg {
     white-space: nowrap;
     max-width: 100%;
 }
-
 
 .voice-bar {
     position: fixed;
@@ -3606,7 +3515,6 @@ svg {
     opacity: 0.5;
     cursor: not-allowed;
 }
-
 
 .modal-overlay {
     position: fixed;
@@ -3679,7 +3587,6 @@ svg {
     to   { transform: translateY(0);   opacity: 1; }
 }
 
-
 .invite-row {
     display: flex;
     gap: 8px;
@@ -3699,7 +3606,6 @@ svg {
     font-size: 13px;
     font-family: 'JetBrains Mono', ui-monospace, monospace;
 }
-
 
 .sidebar__empty {
     margin: 4px 12px;
@@ -3726,7 +3632,6 @@ svg {
     background: #1f1f1f;
 }
 
-
 .btn--ghost {
     background: transparent;
     color: #b9b9b9;
@@ -3752,14 +3657,12 @@ svg {
     background: #b93a3a;
 }
 
-
 .form-narrow {
     display: flex;
     flex-direction: column;
     gap: 16px;
     max-width: 420px;
 }
-
 
 @media (max-width: 1100px) {
     .voice-bar {
@@ -4328,7 +4231,6 @@ svg {
     max-width: 100%;
 }
 
-
 :root {
   --bg: #050505;
   --surface: #131313;
@@ -4589,7 +4491,7 @@ body { background: var(--bg); color: var(--text); }
   align-items: center;
   justify-content: center;
   padding: 24px;
-  background: #050505 url('/background.png') center / cover no-repeat fixed;
+  background: radial-gradient(ellipse at 78% 88%, rgba(255, 157, 0, .30) 0%, rgba(255, 157, 0, .12) 25%, transparent 52%), radial-gradient(ellipse at 12% 8%, rgba(255, 179, 28, .10) 0%, transparent 36%), linear-gradient(135deg, #050505 0%, #090909 48%, #160d02 100%);
   color: #f2f2f2;
   overflow: auto;
 }
@@ -4812,7 +4714,6 @@ body { background: var(--bg); color: var(--text); }
   .login-card .login-button { width: 100%; flex-basis: 100%; }
   .login-card .register-text { margin-left: 0; white-space: normal; }
 }
-
 
 .search-page__form {
   display: flex;
@@ -5240,7 +5141,6 @@ body { background: var(--bg); color: var(--text); }
     background-color: #ffffff;
 }
 
-
 .auth-layout {
     color-scheme: dark;
     background-color: #050505;
@@ -5402,7 +5302,6 @@ body { background: var(--bg); color: var(--text); }
     }
 }
 
-
 .settings-page select,
 .settings-page select.input {
     background-color: #191919 !important;
@@ -5462,7 +5361,6 @@ body { background: var(--bg); color: var(--text); }
 .nebula-select__chevron { font-size: 20px; line-height: 1; color: #d2a04b; transform: translateY(-2px); transition: transform .15s ease; }
 .nebula-select.is-open .nebula-select__chevron { transform: rotate(180deg) translateY(2px); }
 
-
 .language-switcher .nebula-select__trigger {
   border: 0 !important;
   box-shadow: none;
@@ -5490,7 +5388,6 @@ body { background: var(--bg); color: var(--text); }
 @media (prefers-reduced-motion: reduce) {
   .nebula-select__chevron { transition: none; }
 }
-
 
 :root {
     --mnav-h: calc(73px + env(safe-area-inset-bottom, 0px));
@@ -5896,7 +5793,6 @@ body { background: var(--bg); color: var(--text); }
         animation: none;
     }
 }
-
 
 .dock {
     --open: 0;
@@ -7088,7 +6984,6 @@ body { background: var(--bg); color: var(--text); }
     animation: none;
 }
 
-
 :root[data-theme="light"] .auth-layout {
     color-scheme: light;
     color: #202431;
@@ -7228,7 +7123,6 @@ body { background: var(--bg); color: var(--text); }
 @media (prefers-reduced-motion: reduce) {
     .rightbar__panel { transition: none !important; }
 }
-
 
 :root {
     --nebula-light-bg: #f3f5f9;
@@ -7589,7 +7483,6 @@ body { background: var(--bg); color: var(--text); }
     outline-offset: 2px;
 }
 
-
 .splash {
     overflow: hidden;
 }
@@ -7651,7 +7544,6 @@ body { background: var(--bg); color: var(--text); }
         animation: none !important;
     }
 }
-
 
 .auth-theme-switch {
     --sw-track: rgba(20, 20, 22, 0.86);
@@ -8085,7 +7977,6 @@ body { background: var(--bg); color: var(--text); }
         display: none;
     }
 }
-
 
 :root[data-theme="light"] .auth-layout input:-webkit-autofill,
 :root[data-theme="light"] .auth-layout input:-webkit-autofill:hover,
