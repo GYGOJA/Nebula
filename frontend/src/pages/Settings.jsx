@@ -7,6 +7,7 @@ import CustomSelect from '@/components/CustomSelect'
 import { useAuth } from '@/context/AuthContext'
 import OtpInput from '@/components/OtpInput'
 import { CODE_LENGTH, RESEND_SECONDS, isEmail } from '@/utils/auth'
+import { resolveAppearance } from '@/utils/theme'
 
 const DEFAULT_SETTINGS = {
     theme: 'dark',
@@ -30,23 +31,10 @@ function readSavedPreferences() {
     }
 }
 
-function resolveTheme(theme) {
-    if (theme === 'system') {
-        return window.matchMedia('(prefers-color-scheme: light)').matches
-            ? 'light'
-            : 'dark'
-    }
-
-    return String(theme || 'dark').startsWith('light') ? 'light' : 'dark'
-}
-
-function hasMascotBackground(theme) {
-    return String(theme || '').endsWith('-mascot')
-}
-
 function applyAppearance(theme) {
-    document.documentElement.dataset.theme = resolveTheme(theme)
-    document.documentElement.dataset.mascotBackground = hasMascotBackground(theme) ? 'on' : 'off'
+    const { theme: base, mascot } = resolveAppearance(theme)
+    document.documentElement.dataset.theme = base
+    document.documentElement.dataset.mascotBackground = mascot ? 'on' : 'off'
 }
 
 export default function Settings() {
@@ -193,9 +181,7 @@ export default function Settings() {
 
             setSettings(persisted)
             persistLocalPreferences(persisted)
-            document.documentElement.dataset.theme = resolveTheme(
-                persisted.theme
-            )
+            applyAppearance(persisted.theme)
             setNotice(t('settings.saved'))
         } catch (err) {
             setError(err?.message || t('settings.saveFailed'))
@@ -209,6 +195,14 @@ export default function Settings() {
         setError('')
         setNotice('')
 
+        if (!passwords.current || !passwords.next) {
+            setError('Введите текущий и новый пароль')
+            return false
+        }
+        if (passwords.next.length < 8) {
+            setError(t('validation.passwordMin', { min: 8 }))
+            return false
+        }
         if (passwords.next !== passwords.confirm) {
             setError(t('settings.passwordsMismatch'))
             return false
@@ -344,10 +338,11 @@ export default function Settings() {
                                             value={settings.theme || 'dark'}
                                             onChange={(value) => updatePreference('theme', value)}
                                             options={[
-                                                { value: 'light', label: 'Светлая' },
-                                                { value: 'dark', label: 'Тёмная' },
-                                                { value: 'light-mascot', label: 'Светлая с маскотом' },
-                                                { value: 'dark-mascot', label: 'Тёмная с маскотом' },
+                                                { value: 'dark', label: t('settings.themeDark') },
+                                                { value: 'light', label: t('settings.themeLight') },
+                                                { value: 'light-mascot', label: t('settings.themeLightMascot') },
+                                                { value: 'dark-mascot', label: t('settings.themeDarkMascot') },
+                                                { value: 'system', label: t('settings.themeSystem') },
                                             ]}
                                         />
                                     </div>

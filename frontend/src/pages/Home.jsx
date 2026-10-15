@@ -6,13 +6,12 @@ import Avatar from '@/components/Avatar'
 import EmptyState from '@/components/EmptyState'
 import { api } from '@/api'
 import { useI18n } from '@/i18n'
-import { useAuth } from '@/context/AuthContext'
-import Icon from "@/assets/icon/Icon.jsx";
+import { useAppEvent } from '@/hooks/useAppEvent'
+import Icon from '@/assets/icon/Icon.jsx'
+import { sortByRecentVisit } from '@/utils/recentVisits'
 
 export default function Home() {
     const { t } = useI18n()
-    const { user } = useAuth()
-    const [now, setNow] = useState(() => new Date())
     const navigate = useNavigate()
     const [query, setQuery] = useState('')
     const [channels, setChannels] = useState([])
@@ -21,6 +20,7 @@ export default function Home() {
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState('')
     const [inviteOpen, setInviteOpen] = useState(false)
+    const [visitTick, setVisitTick] = useState(0)
 
     const load = async () => {
         setLoading(true)
@@ -45,29 +45,50 @@ export default function Home() {
 
     useEffect(() => {
         load()
+        const updateVisits = () => setVisitTick((value) => value + 1)
+        window.addEventListener('nebula:recent-visits-updated', updateVisits)
+        window.addEventListener('storage', updateVisits)
+        return () => {
+            window.removeEventListener('nebula:recent-visits-updated', updateVisits)
+            window.removeEventListener('storage', updateVisits)
+        }
     }, [])
 
-    useEffect(() => {
-        const updateTime = () => setNow(new Date())
-        const timer = window.setInterval(updateTime, 60000)
-        return () => window.clearInterval(timer)
-    }, [])
+    useAppEvent(['space_updated', 'space_deleted'], async () => {
+        try {
+            const [c, s] = await Promise.all([api.getChannels(), api.getSpaces()])
+            setChannels(c)
+            setSpaces(s)
+        } catch {
+            return
+        }
+    })
+
+    const spaceById = useMemo(() => {
+        const map = {}
+        for (const item of spaces) map[item.id] = item
+        return map
+    }, [spaces])
 
     const term = query.trim()
     const needle = term.toLowerCase()
 
     const shown = useMemo(() => {
-        if (!needle) return { channels, spaces, friends }
+        if (!needle) return {
+            channels: sortByRecentVisit(channels, 'channels').slice(0, 8),
+            spaces: sortByRecentVisit(spaces, 'spaces').slice(0, 8),
+            friends,
+        }
 
         const has = (...values) =>
             values.some((value) => String(value ?? '').toLowerCase().includes(needle))
 
         return {
-            channels: channels.filter((item) => has(item.name, item.desc)),
-            spaces: spaces.filter((item) => has(item.name, item.description)),
+            channels: sortByRecentVisit(channels.filter((item) => has(item.name, item.desc, spaces.find((sp) => String(sp.id) === String(item.spaceId))?.description)), 'channels').slice(0, 8),
+            spaces: sortByRecentVisit(spaces.filter((item) => has(item.name, item.description)), 'spaces').slice(0, 8),
             friends: friends.filter((item) => has(item.name, item.username)),
         }
-    }, [needle, channels, spaces, friends])
+    }, [needle, channels, spaces, friends, visitTick])
 
     const nothingFound =
         Boolean(needle) &&
@@ -79,17 +100,6 @@ export default function Home() {
         if (!term) return
         navigate(`/app/search?q=${encodeURIComponent(term)}`)
     }
-
-    const hour = now.getHours()
-    const greeting = hour >= 5 && hour < 12
-        ? 'Доброе утро'
-        : hour >= 12 && hour < 17
-            ? 'Добрый день'
-            : hour >= 17 && hour < 22
-                ? 'Добрый вечер'
-                : 'Доброй ночи'
-    const displayName = String(user?.displayName || user?.name || user?.username || '').trim()
-    const greetingText = `${greeting}${displayName ? `, ${displayName}` : ''}`
 
     return (
         <div className="app-layout">
@@ -124,18 +134,10 @@ export default function Home() {
                             {t('home.tabPeople')}
                         </Link>
                     </nav>
-
-                    <button
-                        type="button"
-                        className="main__invite"
-                        onClick={() => setInviteOpen(true)}
-                    >
-                        {t('common.invite')}
-                    </button>
                 </div>
 
                 <div className="main__content">
-                    <h1 className="main__hello">{greetingText}</h1>
+                    <h1 className="main__hello">{t('home.greeting')}</h1>
 
                     {term && (
                         <div className="feed-search-note" role="status">
@@ -183,27 +185,22 @@ export default function Home() {
 
                     {!loading && !error && shown.channels.length > 0 && (
                         <div className="channels">
-                            {shown.channels.map((ch) => (
+                            {shown.channels.slice(0, 8).map((ch) => (
                                 <Link
                                     key={ch.id}
                                     to={`/app/channels/${ch.id}`}
                                     className="channel-card"
                                 >
-                                    <div className="channel-card__icon">
-                                        <Icon name="hash" />
-                                    </div>
-
                                     <div className="channel-card__body">
-                                        <div className="channel-card__name">
-                                            {ch.name}
-                                        </div>
+                                        <div className="channel-card__name">{ch.name}</div>
                                         <div className="channel-card__desc">
-                                            {ch.unread > 0
-                                                ? t('home.unread', {
-                                                    count: ch.unread,
-                                                })
-                                                : ch.desc}
+                                            {spaceById[ch.spaceId]?.description || ch.desc || spaceById[ch.spaceId]?.name}
                                         </div>
+                                    </div>
+                                    <div className={`channel-card__icon${spaceById[ch.spaceId]?.avatarUrl ? ' channel-card__icon--avatar' : ''}`}>
+                                        {spaceById[ch.spaceId]?.avatarUrl ? (
+                                            <Avatar src={spaceById[ch.spaceId].avatarUrl} label={spaceById[ch.spaceId].name} size={24} />
+                                        ) : <Icon name="hash" />}
                                     </div>
 
                                     {ch.unread > 0 && (
@@ -231,18 +228,27 @@ export default function Home() {
 
                     {!loading && !error && shown.spaces.length > 0 && (
                         <div className="spaces">
-                            {shown.spaces.map((sp) => (
+                            {shown.spaces.slice(0, 8).map((sp) => (
                                 <Link
                                     key={sp.id}
                                     to={`/app/spaces/${sp.id}`}
                                     className="space-card"
                                 >
                                     <div className="space-card__art">
-                                        {sp.emoji || <Icon name="users" />}
+                                        {sp.avatarUrl || sp.avatar_url ? (
+                                            <Avatar src={sp.avatarUrl || sp.avatar_url} label={sp.name} size={44} />
+                                        ) : (
+                                            sp.emoji || <Icon name="users" />
+                                        )}
                                     </div>
-                                    <div className="space-card__name">{sp.name}</div>
-                                    <div className="space-card__members">
-                                        {t('home.members', { count: sp.members })}
+                                    <div className="space-card__info">
+                                        <div className="space-card__name">{sp.name}</div>
+                                        {sp.description && (
+                                            <div className="space-card__desc">{sp.description}</div>
+                                        )}
+                                        <div className="space-card__members">
+                                            {t('home.members', { count: sp.members })}
+                                        </div>
                                     </div>
                                 </Link>
                             ))}
@@ -270,7 +276,7 @@ export default function Home() {
                                     to={`/app/dm/${f.id}`}
                                     className="friend-card"
                                 >
-                                    <Avatar label={f.avatar} size={56} />
+                                    <Avatar src={f.avatarUrl || f.avatar_url || f.avatar} label={f.displayName || f.name} size={80} />
                                     <div className="friend-card__name">{f.name}</div>
                                     <div className={`friend-card__status friend-card__status--${f.status}`}>
                                         {f.status === 'voice'

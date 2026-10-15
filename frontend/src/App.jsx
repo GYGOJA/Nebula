@@ -3,6 +3,7 @@ import { RouterProvider } from 'react-router-dom'
 import { router } from './router'
 import { AuthProvider } from './context/AuthContext'
 import SplashScreen from './components/SplashScreen'
+import { resolveAppearance } from './utils/theme'
 
 function readPreferences() {
     try {
@@ -13,14 +14,9 @@ function readPreferences() {
 }
 
 function applyPreferences() {
-    const preferences = readPreferences()
-    const theme = preferences.theme || 'dark'
-
-    const resolvedTheme = String(theme).startsWith('light') ? 'light' : 'dark'
-
-    document.documentElement.dataset.theme = resolvedTheme
-    document.documentElement.dataset.mascotBackground =
-        String(theme).endsWith('-mascot') ? 'on' : 'off'
+    const { theme, mascot } = resolveAppearance(readPreferences().theme)
+    document.documentElement.dataset.theme = theme
+    document.documentElement.dataset.mascotBackground = mascot ? 'on' : 'off'
 }
 
 if (typeof window !== 'undefined' && typeof document !== 'undefined') {

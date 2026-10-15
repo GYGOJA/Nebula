@@ -1,14 +1,14 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { api } from '@/api'
+import { session } from '@/api/client'
 import Avatar from './Avatar'
 import EmptyState from './EmptyState'
+import Icon from '@/assets/icon/Icon.jsx'
 import { useI18n } from '@/i18n'
-import { rightPanel, useRightPanel } from '@/utils/navPanel'
-import Icon from "@/assets/icon/Icon.jsx";
-
-const canHover = () =>
-    typeof window !== 'undefined' &&
-    window.matchMedia('(hover: hover) and (pointer: fine)').matches
+import { formatBytes } from '@/utils/format'
+import { clearDownloads, readDownloads } from '@/utils/downloads'
+import RightPanel from './RightPanel'
 
 const TABS = [
     { id: 'participants', icon: 'users', labelKey: 'rightbar.participants' },
@@ -16,120 +16,65 @@ const TABS = [
     { id: 'files', icon: 'folder', labelKey: 'rightbar.files' },
 ]
 
+const POLL_MS = 5000
+
 export default function RightSidebar({ roomId }) {
-    const { t } = useI18n()
+    const { t, language } = useI18n()
     const [tab, setTab] = useState('participants')
-    const [room, setRoom] = useState(null)
-    const [participants, setParticipants] = useState([])
+    const [rooms, setRooms] = useState([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState('')
-    const panelOpen = useRightPanel()
-    const tabIndex = Math.max(TABS.findIndex((item) => item.id === tab), 0)
-
-    useEffect(() => {
-        rightPanel.close()
-    }, [])
-
-    useEffect(() => {
-        if (!panelOpen) return undefined
-
-        const onKeyDown = (event) => {
-            if (event.key === 'Escape') rightPanel.close()
-        }
-
-        window.addEventListener('keydown', onKeyDown)
-        return () => window.removeEventListener('keydown', onKeyDown)
-    }, [panelOpen])
+    const [downloads, setDownloads] = useState(readDownloads)
+    const selfId = String(session.getUser()?.id || session.getUser()?.userId || '')
 
     useEffect(() => {
         let active = true
 
-        async function loadRoom() {
-            setLoading(true)
-            setError('')
+        async function loadRooms(first) {
+            if (first) setLoading(true)
 
             try {
-                const rooms = await api.getVoiceRooms()
+                const all = await api.getVoiceRooms()
                 if (!active) return
 
-                const selected = roomId
-                    ? rooms.find((item) => String(item.id) === String(roomId))
-                    : null
-
-                setRoom(selected || null)
-                setParticipants(selected?.participants || [])
+                setRooms(all.filter((room) =>
+                    (room.participants || []).length > 0 || (roomId && String(room.id) === String(roomId))
+                ))
+                setError('')
             } catch (err) {
                 if (active) {
-                    setRoom(null)
-                    setParticipants([])
+                    setRooms([])
                     setError(err?.message || t('rightbar.loadFailed'))
                 }
             } finally {
-                if (active) setLoading(false)
+                if (active && first) setLoading(false)
             }
         }
 
-        loadRoom()
+        loadRooms(true)
+        const timer = window.setInterval(() => loadRooms(false), POLL_MS)
 
         return () => {
             active = false
+            window.clearInterval(timer)
         }
     }, [roomId])
 
-    const selectTab = (id) => {
-        setTab(id)
+    useEffect(() => {
+        const refresh = () => setDownloads(readDownloads())
+        window.addEventListener('nebula:downloads', refresh)
+        return () => window.removeEventListener('nebula:downloads', refresh)
+    }, [])
 
-        if (!canHover()) rightPanel.set(true)
-    }
+    const isMine = useCallback((room) =>
+        (room.participants || []).some((p) => String(typeof p === 'object' ? p.id : p) === selfId),
+    [selfId])
+
+    
+    const sorted = [...rooms].sort((a, b) => Number(isMine(b)) - Number(isMine(a)))
 
     return (
-        <>
-        <button
-            type="button"
-            className={`rightbar-backdrop${panelOpen ? ' is-open' : ''}`}
-            aria-label={t('rightbar.close')}
-            tabIndex={-1}
-            onClick={rightPanel.close}
-        />
-
-        <aside
-            className={`rightbar${panelOpen ? ' rightbar--open' : ''}`}
-            style={{ '--i': tabIndex, '--n': TABS.length }}
-            onMouseLeave={() => {
-                if (canHover()) {
-                    rightPanel.close()
-
-                    const active = document.activeElement
-                    if (active instanceof HTMLElement && active.closest('.rightbar')) {
-                        active.blur()
-                    }
-                }
-            }}
-        >
-            <button
-                type="button"
-                className="rightbar__handle"
-                onClick={rightPanel.toggle}
-                aria-label={t('rightbar.open')}
-                aria-expanded={panelOpen}
-            >
-                <Icon name="users" />
-            </button>
-
-            <div className="rightbar__panel">
-            <div className="rightbar__body">
-            <h2 className="rightbar__title">
-                {t(TABS[tabIndex].labelKey)}
-                <button
-                    type="button"
-                    className="rightbar__close"
-                    onClick={rightPanel.close}
-                    aria-label={t('rightbar.close')}
-                >
-                    <Icon name="x" />
-                </button>
-            </h2>
-
+        <RightPanel tabs={TABS} tab={tab} onTabChange={setTab}>
             {loading && <p className="muted">{t('common.loading')}</p>}
 
             {!loading && error && (
@@ -140,54 +85,60 @@ export default function RightSidebar({ roomId }) {
 
             {!loading && !error && tab === 'participants' && (
                 <div className="rightbar__content">
-                    {room && (
-                        <div className="rightbar__section-title">
-                            {t('rightbar.inVoice', { count: participants.length })}
-                        </div>
-                    )}
-
-                    {!room && (
+                    {sorted.length === 0 && (
                         <EmptyState
-                            icon="volume-2"
+                            icon="headphones"
                             title={t('rightbar.noRoomTitle')}
                             description={t('rightbar.noRoomDesc')}
                         />
                     )}
 
-                    {room && participants.length === 0 && (
-                        <EmptyState
-                            icon="users"
-                            title={t('common.noOneYet')}
-                            description={t('rightbar.emptyRoomDesc')}
-                        />
-                    )}
+                    {sorted.map((room) => {
+                        const people = room.participants || []
+                        const mine = isMine(room)
 
-                    {room && participants.length > 0 && (
-                        <ul className="rightbar__users">
-                            {participants.map((participant) => {
-                                const user = typeof participant === 'object'
-                                    ? participant
-                                    : { id: participant, name: '' }
+                        return (
+                            <section key={room.id} className={`rightbar-voice${mine ? ' rightbar-voice--mine' : ''}`}>
+                                <Link to={`/app/voice/${room.id}`} className="rightbar-voice__head">
+                                    <span className="rightbar-voice__icon"><Icon name="headphones" /></span>
+                                    <span className="rightbar-voice__title">
+                                        <strong>{room.name}</strong>
+                                        <small>{room.spaceName || t('rightbar.inVoice', { count: people.length })}</small>
+                                    </span>
+                                    {mine
+                                        ? <span className="rightbar-voice__badge">{t('rightbar.youAreHere')}</span>
+                                        : <span className="rightbar-voice__count">{people.length}</span>}
+                                </Link>
 
-                                return (
-                                    <li
-                                        className="rightbar__user"
-                                        key={user.id}
-                                    >
-                                        <Avatar
-                                            src={user.avatarUrl || user.avatar}
-                                            label={user.name}
-                                            size={36}
-                                        />
+                                {people.length === 0 ? (
+                                    <p className="rightbar-voice__empty">{t('rightbar.emptyRoomDesc')}</p>
+                                ) : (
+                                    <ul className="rightbar__users">
+                                        {people.map((participant) => {
+                                            const user = typeof participant === 'object'
+                                                ? participant
+                                                : { id: participant, name: '' }
 
-                                        <span className="rightbar__user-name">
-                                            {user.displayName || user.name || t('common.user')}
-                                        </span>
-                                    </li>
-                                )
-                            })}
-                        </ul>
-                    )}
+                                            return (
+                                                <li className="rightbar__user" key={user.id}>
+                                                    <Avatar
+                                                        src={user.avatarUrl || user.avatar}
+                                                        label={user.name}
+                                                        size={32}
+                                                    />
+                                                    <span className="rightbar__user-name">
+                                                        {user.displayName || user.name || t('common.user')}
+                                                    </span>
+                                                    {user.sharing && <Icon name="monitor" className="rightbar__user-flag" />}
+                                                    {user.muted && <Icon name="mic-off" className="rightbar__user-flag" />}
+                                                </li>
+                                            )
+                                        })}
+                                    </ul>
+                                )}
+                            </section>
+                        )
+                    })}
                 </div>
             )}
 
@@ -200,36 +151,38 @@ export default function RightSidebar({ roomId }) {
             )}
 
             {!loading && !error && tab === 'files' && (
-                <EmptyState
-                    icon="folder"
-                    title={t('rightbar.noFilesTitle')}
-                    description={t('rightbar.noFilesDesc')}
-                />
+                downloads.length === 0 ? (
+                    <EmptyState
+                        icon="folder"
+                        title={t('rightbar.noFilesTitle')}
+                        description={t('rightbar.noFilesDesc')}
+                    />
+                ) : (
+                    <div className="rightbar__content">
+                        <div className="rightbar__section-title rightbar__section-title--row">
+                            <span>{t('rightbar.downloaded')}</span>
+                            <button type="button" className="rightbar__clear" onClick={clearDownloads}>
+                                {t('rightbar.clearFiles')}
+                            </button>
+                        </div>
+                        <ul className="rightbar-files">
+                            {downloads.map((file) => (
+                                <li key={file.id} className="rightbar-file">
+                                    <span className="rightbar-file__ext">
+                                        {(file.name.split('.').pop() || '').slice(0, 4).toUpperCase() || '•'}
+                                    </span>
+                                    <span className="rightbar-file__info">
+                                        <span className="rightbar-file__name" title={file.name}>{file.name}</span>
+                                        <span className="rightbar-file__meta">
+                                            {formatBytes(file.size, language)} · {new Date(file.at).toLocaleString(language, { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                                        </span>
+                                    </span>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                )
             )}
-            </div>
-
-            <div className="rightbar__rail" role="tablist" aria-orientation="vertical">
-                <span className="rightbar__slider" aria-hidden="true" />
-
-                {TABS.map((item) => (
-                    <button
-                        key={item.id}
-                        type="button"
-                        role="tab"
-                        aria-selected={tab === item.id}
-                        title={t(item.labelKey)}
-                        className={`rightbar__rail-btn${
-                            tab === item.id ? ' is-active' : ''
-                        }`}
-                        onClick={() => selectTab(item.id)}
-                    >
-                        <Icon name={item.icon} />
-                        <span className="rightbar__rail-label">{t(item.labelKey)}</span>
-                    </button>
-                ))}
-            </div>
-            </div>
-        </aside>
-        </>
+        </RightPanel>
     )
 }

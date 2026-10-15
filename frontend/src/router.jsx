@@ -18,6 +18,7 @@ import Friends from '@/pages/Friends'
 import Search from '@/pages/Search'
 import Settings from '@/pages/Settings'
 import Profile from '@/pages/Profile'
+import UserProfile from '@/pages/UserProfile'
 
 import {
     Spaces as SpacesList,
@@ -25,6 +26,7 @@ import {
 } from '@/pages/Spaces'
 
 import CreateSpace from '@/pages/CreateSpace'
+import SpaceSettings from '@/pages/SpaceSettings'
 
 import {
     DmList,
@@ -68,9 +70,11 @@ export const router = createBrowserRouter([
             { path: 'search', element: <Search /> },
             { path: 'settings', element: <Settings /> },
             { path: 'profile', element: <Profile /> },
+            { path: 'users/:userId', element: <UserProfile /> },
             { path: 'spaces', element: <SpacesList /> },
             { path: 'spaces/new', element: <CreateSpace /> },
             { path: 'spaces/:spaceId', element: <SpaceDetail /> },
+            { path: 'spaces/:spaceId/settings', element: <SpaceSettings /> },
             { path: 'dm', element: <DmList /> },
             { path: 'dm/:userId', element: <DmChat /> },
             { path: 'voice/:roomId', element: <VoiceRoom /> },

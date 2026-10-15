@@ -1,35 +1,42 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
-import RightSidebar from '@/components/RightSidebar'
-import PageHeader from '@/components/PageHeader'
+import { Navigate, useNavigate, useParams } from 'react-router-dom'
+import SpaceChannelSidebar from '@/components/SpaceChannelSidebar'
+import SpaceMembersSidebar from '@/components/SpaceMembersSidebar'
+import VoiceStage from '@/components/VoiceStage'
 import Avatar from '@/components/Avatar'
-import EmptyState from '@/components/EmptyState'
+import Icon from '@/assets/icon/Icon.jsx'
 import { api } from '@/api'
 import { useI18n } from '@/i18n'
-import Icon from "@/assets/icon/Icon.jsx";
+import { useCall } from '@/context/CallContext'
+import { useAppEvent } from '@/hooks/useAppEvent'
 
 export default function VoiceRoom() {
     const { t } = useI18n()
     const { roomId } = useParams()
-    const [rooms, setRooms] = useState([])
+    const navigate = useNavigate()
+    const { active, status, roomsLive, join } = useCall()
     const [room, setRoom] = useState(null)
+    const [space, setSpace] = useState(null)
     const [loading, setLoading] = useState(true)
-    const [busy, setBusy] = useState(false)
     const [error, setError] = useState('')
-    const [notice, setNotice] = useState('')
+    const [busy, setBusy] = useState(false)
 
     const load = useCallback(async () => {
         setLoading(true)
         setError('')
 
         try {
-            const result = await api.getVoiceRooms()
-            const list = Array.isArray(result) ? result : []
+            const result = await api.getVoiceRoom(roomId)
 
-            setRooms(list)
-            setRoom(
-                list.find((item) => String(item.id) === String(roomId)) || null
-            )
+            setRoom(result)
+
+            if (result.spaceId) {
+                try {
+                    setSpace(await api.getSpace(result.spaceId))
+                } catch {
+                    setSpace(null)
+                }
+            }
         } catch (err) {
             setError(err?.message || t('voice.loadFailed'))
         } finally {
@@ -41,159 +48,87 @@ export default function VoiceRoom() {
         load()
     }, [load])
 
-    const join = async () => {
-        setBusy(true)
-        setError('')
-        setNotice('')
-
+    
+    useAppEvent(['space_updated', 'space_deleted'], async () => {
         try {
-            const updated = await api.joinVoice(roomId)
-            setRoom(updated)
-            setNotice(
-                t('voice.joined')
-            )
-        } catch (err) {
-            setError(err?.message || t('voice.connectFailed'))
-        } finally {
-            setBusy(false)
-        }
-    }
+            const result = await api.getVoiceRoom(roomId)
 
-    const leave = async () => {
+            if (result?.spaceId) setSpace(await api.getSpace(result.spaceId))
+        } catch {
+            navigate(room?.spaceId ? `/app/spaces/${room.spaceId}` : '/app', { replace: true })
+        }
+    })
+
+    if (room?.kind === 'call') return <Navigate to="/app/dm" replace />
+
+    const connected = active?.roomId === roomId
+    const people = roomsLive[roomId] || room?.participants || []
+
+    const connect = async () => {
         setBusy(true)
-        setError('')
-        setNotice('')
 
-        try {
-            await api.leaveVoice(roomId)
-            await load()
-            setNotice(t('voice.left'))
-        } catch (err) {
-            setError(err?.message || t('voice.leaveFailed'))
-        } finally {
-            setBusy(false)
-        }
+        await join(roomId, { name: room?.name })
+
+        setBusy(false)
     }
 
     return (
-        <div className="app-layout">
+        <div className="app-layout app-layout--space">
+            {room?.spaceId ? (
+                <SpaceChannelSidebar spaceId={room.spaceId} activeChannelId={roomId} spaceName={space?.name} />
+            ) : (
+                <div />
+            )}
 
-            <main className="main">
-                <div className="main__content">
-                    <PageHeader title={room?.name || t('voice.roomTitle')} />
+            <main className="chat chat--space voice-page">
+                <header className="chat__header">
+                    <div className="chat__title-wrap">
+                        <div className="chat__title">
+                            <Icon name="volume-2" className="voice-page__icon" /> {room?.name || t('voice.roomTitle')}
+                        </div>
+                        <div className="chat__sub">{t('voice.participantsCount', { count: people.length })}</div>
+                    </div>
+                </header>
 
+                <div className="voice-page__body">
                     {loading && <p className="muted">{t('common.loading')}</p>}
-                    {error && <p className="auth-inline-error">{error}</p>}
-                    {notice && <p className="form-notice">{notice}</p>}
+                    {!loading && error && <p className="auth-inline-error">{error}</p>}
 
-                    {!loading && !error && !room && (
-                        <EmptyState
-                            icon="volume-2"
-                            title={t('voice.notFoundTitle')}
-                            description={t('voice.notFoundDesc')}
-                        />
-                    )}
+                    {!loading && !error && connected && <VoiceStage roomId={roomId} />}
 
-                    {!loading && !error && room && (
-                        <section className="voice-room">
-                            <div className="voice-room__status">
-                                <Icon name="users" />
-                                <span>
-                                    {t('voice.participantsCount', {
-                                        count:
-                                            room.members ??
-                                            room.participants?.length ??
-                                            0,
-                                    })}
-                                </span>
-                            </div>
-
-                            <p className="muted">
-                                {t('voice.notice')}
-                            </p>
-
-                            <div className="voice-room__actions">
-                                <button
-                                    type="button"
-                                    className="btn btn--primary"
-                                    onClick={join}
-                                    disabled={busy}
-                                >
-                                    {busy ? t('voice.connecting') : t('voice.connect')}
-                                </button>
-
-                                <button
-                                    type="button"
-                                    className="btn btn--ghost"
-                                    onClick={leave}
-                                    disabled={busy}
-                                >
-                                    {t('common.disconnect')}
-                                </button>
-                            </div>
-
-                            <h2 className="section-title">{t('voice.rooms')}</h2>
-
-                            {rooms.length === 0 ? (
-                                <EmptyState
-                                    icon="volume-2"
-                                    title={t('voice.noRoomsTitle')}
-                                    description={t('voice.noRoomsDesc')}
-                                />
+                    {!loading && !error && !connected && (
+                        <div className="voice-join">
+                            {people.length === 0 ? (
+                                <p className="muted">{t('voice.empty')}</p>
                             ) : (
-                                <div className="space-channel-list">
-                                    {rooms.map((item) => (
-                                        <Link
-                                            key={item.id}
-                                            className="space-channel"
-                                            to={`/app/voice/${item.id}`}
-                                        >
-                                            <Icon name="volume-2" />
-                                            <span>{item.name}</span>
-                                        </Link>
+                                <div className="voice-join__people">
+                                    {people.map((person) => (
+                                        <div key={person.id} className="voice-join__person">
+                                            <Avatar
+                                                src={person.avatarUrl || person.avatar}
+                                                label={person.displayName || person.name}
+                                                size={56}
+                                            />
+                                            <span>{person.displayName || person.name}</span>
+                                        </div>
                                     ))}
                                 </div>
                             )}
 
-                            <h2 className="section-title">{t('voice.participants')}</h2>
-
-                            {!room.participants?.length ? (
-                                <p className="muted">
-                                    {t('voice.noParticipantData')}
-                                </p>
-                            ) : (
-                                <div className="friend-list">
-                                    {room.participants.map((participant) => {
-                                        const user = typeof participant === 'object'
-                                            ? participant
-                                            : { id: participant, name: '' }
-
-                                        return (
-                                            <div
-                                                className="friend-row"
-                                                key={user.id}
-                                            >
-                                                <Avatar
-                                                    src={user.avatarUrl || user.avatar}
-                                                    label={user.name}
-                                                    size={40}
-                                                />
-                                                <span>
-                                                    {user.displayName ||
-                                                        user.name ||
-                                                        t('common.user')}
-                                                </span>
-                                            </div>
-                                        )
-                                    })}
-                                </div>
-                            )}
-                        </section>
+                            <button
+                                type="button"
+                                className="btn btn--primary"
+                                onClick={connect}
+                                disabled={busy || status === 'connecting'}
+                            >
+                                {busy ? t('voice.connecting') : t('voice.joinRoom')}
+                            </button>
+                        </div>
                     )}
                 </div>
             </main>
 
-            <RightSidebar roomId={roomId} />
+            <SpaceMembersSidebar space={space} channelId={roomId} />
         </div>
     )
 }

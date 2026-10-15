@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '@/api'
 import { useI18n } from '@/i18n'
-import Icon from '@/components/Icon'
+import Icon from '@/assets/icon/Icon.jsx'
 
 export default function VoiceBar({ room, onLeave }) {
     const { t } = useI18n()

@@ -183,15 +183,19 @@ export default function Friends() {
                                                 key={friend.id}
                                                 className="friend-row"
                                             >
-                                                <Avatar
-                                                    src={friend.avatarUrl || friend.avatar}
-                                                    label={friend.name}
-                                                    size={44}
-                                                />
+                                                <Link to={`/app/users/${friend.id}`}>
+                                                    <Avatar
+                                                        src={friend.avatarUrl || friend.avatar}
+                                                        label={friend.name}
+                                                        size={44}
+                                                    />
+                                                </Link>
 
                                                 <div className="friend-row__info">
                                                     <div className="friend-row__name">
-                                                        {friend.displayName || friend.name}
+                                                        <Link to={`/app/users/${friend.id}`}>
+                                                            {friend.displayName || friend.name}
+                                                        </Link>
                                                     </div>
                                                     <div className="friend-row__status">
                                                         {friend.status === 'online'

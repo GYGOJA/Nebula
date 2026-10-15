@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import MessageItem from './MessageItem'
 import { useI18n } from '@/i18n'
 
@@ -7,8 +8,17 @@ export default function MessageList({
                                         loading,
                                         error,
                                         onRetry,
+                                        onReply,
+                                        onEdit,
+                                        onDelete,
                                     }) {
     const { t } = useI18n()
+    const bottomRef = useRef(null)
+    const count = messages.length
+
+    useEffect(() => {
+        bottomRef.current?.scrollIntoView({ block: 'end' })
+    }, [count, loading])
 
     if (loading) {
         return (
@@ -52,9 +62,13 @@ export default function MessageList({
                 <MessageItem
                     key={m.id}
                     message={m}
-                    author={authorsById[m.authorId]}
+                    author={authorsById[m.authorId] || m.author}
+                    onReply={onReply}
+                    onEdit={onEdit}
+                    onDelete={onDelete}
                 />
             ))}
+            <div ref={bottomRef} />
         </div>
     )
 }

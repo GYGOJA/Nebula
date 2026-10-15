@@ -5,7 +5,7 @@ const CYCLE_MS = 24 * 84
 const HOLD_MS = 120
 const FADE_MS = 520
 const MAX_WAIT_MS = 9000
-const PRELOAD = ['/logo_static.svg', '/logo_animation.svg']
+const PRELOAD = ['/mascot-background.png', '/logo_static.svg', '/logo_animation.svg']
 
 const preloadImage = (src) =>
     new Promise((resolve) => {

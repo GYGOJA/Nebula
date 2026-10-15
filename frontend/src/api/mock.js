@@ -131,6 +131,23 @@ export const mockApi = {
         return { ...state.profile }
     },
 
+    async uploadAvatar(file) {
+        await wait()
+        if (!file || !['image/png', 'image/jpeg'].includes(file.type)) fail('Use a PNG or JPG image')
+        if (file.size > 5 * 1024 * 1024) fail('The avatar must be 5 MB or smaller')
+        if (String(state.profile.avatarUrl || '').startsWith('blob:')) URL.revokeObjectURL(state.profile.avatarUrl)
+        const avatarUrl = URL.createObjectURL(file)
+        state.profile = { ...state.profile, avatar: avatarUrl, avatarUrl }
+        return { ...state.profile }
+    },
+
+    async deleteAvatar() {
+        await wait()
+        if (String(state.profile.avatarUrl || '').startsWith('blob:')) URL.revokeObjectURL(state.profile.avatarUrl)
+        state.profile = { ...state.profile, avatar: '', avatarUrl: '' }
+        return { ...state.profile }
+    },
+
     async getSettings() {
         await wait()
         return { ...state.settings }
@@ -174,6 +191,24 @@ export const mockApi = {
         return { ok: true }
     },
 
+    async changeEmail({ email, password }) {
+        await wait()
+
+        const next = String(email || '').trim().toLowerCase()
+
+        if (!next || !password) fail(t('mock.fillFields'))
+
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(next)) {
+            fail(t('validation.emailInvalid'))
+        }
+
+        if (state.users.some((user) => user.email?.toLowerCase() === next)) {
+            fail(t('settings.emailTaken'))
+        }
+
+        state.profile = { ...state.profile, email: next }
+        return { ok: true, email: next, user: { ...state.profile } }
+    },
 
     async requestEmailChangeCode({ email }) {
         await wait()
@@ -245,12 +280,16 @@ export const mockApi = {
         }))
     },
 
-    async sendMessage(channelId, content) {
+    async sendMessage(channelId, content, options = {}) {
         await wait(150)
 
-        const text = content?.trim()
-        if (!text) fail(t('errors.emptyMessage'))
+        const payload = typeof content === 'string' ? { ...options, text: content } : (content || {})
+        const text = String(payload.text ?? payload.content ?? '').trim()
+        if (!text && !(payload.files || []).length) fail(t('errors.emptyMessage'))
 
+        const target = payload.replyToId
+            ? (state.messagesStore[channelId] || []).find((item) => String(item.id) === String(payload.replyToId))
+            : null
         const message = {
             id: `m-${Date.now()}`,
             authorId: 'me',
@@ -259,6 +298,9 @@ export const mockApi = {
                 minute: '2-digit',
             }),
             text,
+            content: text,
+            attachments: [],
+            replyTo: target ? { id: target.id, text: target.text || '', author: target.author?.displayName || target.author?.name || (target.authorId === 'me' ? state.profile.displayName || state.profile.name : 'User') } : null,
             self: true,
             reactions: [],
             createdAt: new Date().toISOString(),
@@ -270,6 +312,29 @@ export const mockApi = {
 
         state.messagesStore[channelId].push(message)
         return { ...message }
+    },
+
+    async editMessage(channelId, messageId, text) {
+        await wait()
+        const message = (state.messagesStore[channelId] || []).find((item) => String(item.id) === String(messageId))
+        if (!message) fail('Message not found', 'NOT_FOUND')
+        if (!(message.self || message.authorId === 'me')) fail('You can only edit your own messages', 'FORBIDDEN')
+        const next = String(text || '').trim()
+        if (!next) fail('Message cannot be empty')
+        message.text = next
+        message.content = next
+        message.editedAt = new Date().toISOString()
+        return { ...message }
+    },
+
+    async deleteMessage(channelId, messageId) {
+        await wait()
+        const list = state.messagesStore[channelId] || []
+        const message = list.find((item) => String(item.id) === String(messageId))
+        if (!message) fail('Message not found', 'NOT_FOUND')
+        if (!(message.self || message.authorId === 'me')) fail('You can only delete your own messages', 'FORBIDDEN')
+        state.messagesStore[channelId] = list.filter((item) => String(item.id) !== String(messageId))
+        return { ok: true }
     },
 
     async getFriends() {
@@ -406,16 +471,25 @@ export const mockApi = {
         return (state.dm[userId] || []).map((message) => ({ ...message }))
     },
 
-    async sendDm(userId, content) {
+    async sendDm(userId, content, options = {}) {
         await wait(150)
 
-        const text = content?.trim()
-        if (!text) fail(t('errors.emptyMessage'))
-
+        const payload = typeof content === 'string' ? { ...options, text: content } : (content || {})
+        const text = String(payload.text ?? payload.content ?? '').trim()
+        if (!text && !(payload.files || []).length) fail(t('errors.emptyMessage'))
+        const target = payload.replyToId
+            ? (state.dm[userId] || []).find((item) => String(item.id) === String(payload.replyToId))
+            : null
         const message = {
             id: `dm-${Date.now()}`,
             from: 'me',
+            authorId: 'me',
+            self: true,
             text,
+            content: text,
+            attachments: [],
+            replyTo: target ? { id: target.id, text: target.text || '', author: target.author?.displayName || target.author?.name || (target.authorId === 'me' || target.from === 'me' ? state.profile.displayName || state.profile.name : 'User') } : null,
+            createdAt: new Date().toISOString(),
             time: new Date().toLocaleTimeString(getLocale(), {
                 hour: '2-digit',
                 minute: '2-digit',
@@ -426,6 +500,29 @@ export const mockApi = {
         state.dm[userId].push(message)
 
         return { ...message }
+    },
+
+    async editDmMessage(userId, messageId, text) {
+        await wait()
+        const message = (state.dm[userId] || []).find((item) => String(item.id) === String(messageId))
+        if (!message) fail('Message not found', 'NOT_FOUND')
+        if (!(message.self || message.authorId === 'me' || message.from === 'me')) fail('You can only edit your own messages', 'FORBIDDEN')
+        const next = String(text || '').trim()
+        if (!next) fail('Message cannot be empty')
+        message.text = next
+        message.content = next
+        message.editedAt = new Date().toISOString()
+        return { ...message }
+    },
+
+    async deleteDmMessage(userId, messageId) {
+        await wait()
+        const list = state.dm[userId] || []
+        const message = list.find((item) => String(item.id) === String(messageId))
+        if (!message) fail('Message not found', 'NOT_FOUND')
+        if (!(message.self || message.authorId === 'me' || message.from === 'me')) fail('You can only delete your own messages', 'FORBIDDEN')
+        state.dm[userId] = list.filter((item) => String(item.id) !== String(messageId))
+        return { ok: true }
     },
 
     async getVoiceRooms(spaceId) {
@@ -479,6 +576,78 @@ export const mockApi = {
                 Date.now() + 7 * 24 * 60 * 60 * 1000
             ).toISOString(),
         }
+    },
+
+    async getInvite() {
+        await wait()
+
+        const space = state.spaces[0]
+        if (!space) fail(t('mock.noSpaces'), 'NOT_FOUND')
+
+        return { space, isMember: true }
+    },
+
+    async getSpaceSettings(id) {
+        await wait()
+
+        const space = state.spaces.find((item) => item.id === id)
+        if (!space) fail(t('mock.spaceNotFound'), 'NOT_FOUND')
+
+        return {
+            space,
+            isOwner: true,
+            permissions: 63,
+            can: { administrator: true, manageSpace: true, manageChannels: true, manageRoles: true, invite: true, send: true },
+            roles: [{ id: 'everyone', name: '@everyone', color: '#95908c', permissions: 48, isDefault: true, position: 0, members: 1 }],
+            sections: state.channels.filter((channel) => channel.spaceId === id).map((channel) => ({ ...channel, restricted: false, access: [] })),
+            members: [],
+        }
+    },
+
+    async updateSpace(id, patch) {
+        await wait()
+
+        const space = state.spaces.find((item) => item.id === id)
+        if (!space) fail(t('mock.spaceNotFound'), 'NOT_FOUND')
+
+        Object.assign(space, patch)
+        return { ...space }
+    },
+
+    async deleteSpace(id) {
+        await wait()
+
+        state.spaces = state.spaces.filter((item) => item.id !== id)
+        return { ok: true }
+    },
+
+    async deleteSpaceAvatar() {
+        await wait()
+        return {}
+    },
+
+    async createRole() {
+        fail('Roles are not available in demo mode')
+    },
+
+    async updateRole() {
+        fail('Roles are not available in demo mode')
+    },
+
+    async deleteRole() {
+        fail('Roles are not available in demo mode')
+    },
+
+    async setMemberRoles() {
+        fail('Roles are not available in demo mode')
+    },
+
+    async updateSection() {
+        fail('Channel settings are not available in demo mode')
+    },
+
+    async deleteSection() {
+        fail('Channel settings are not available in demo mode')
     },
 
     async acceptInvite({ code }) {

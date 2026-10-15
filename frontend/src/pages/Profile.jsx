@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
 import RightSidebar from '@/components/RightSidebar'
 import PageHeader from '@/components/PageHeader'
+import Icon from '@/assets/icon/Icon.jsx'
 import Avatar from '@/components/Avatar'
 import EmptyState from '@/components/EmptyState'
 import { api } from '@/api'
+import { useAuth } from '@/context/AuthContext'
 
 const EMPTY_FORM = {
     displayName: '',
@@ -69,7 +71,9 @@ const formatDateInput = (value) => {
 }
 
 export default function Profile() {
+    const { updateUser } = useAuth()
     const [profile, setProfile] = useState(null)
+    const [uploadingAvatar, setUploadingAvatar] = useState(false)
     const [form, setForm] = useState(EMPTY_FORM)
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
@@ -121,10 +125,68 @@ export default function Profile() {
         }))
     }
 
+    const uploadAvatar = async (event) => {
+        const file = event.target.files?.[0]
+        event.target.value = ''
+        if (!file) return
+        if (!['image/png', 'image/jpeg'].includes(file.type)) {
+            setError('Допустимые форматы аватара: JPG и PNG')
+            return
+        }
+        if (file.size > 5 * 1024 * 1024) {
+            setError('Размер аватара не должен превышать 5 МБ')
+            return
+        }
+        setUploadingAvatar(true)
+        setError('')
+        setNotice('')
+        try {
+            const updated = await api.uploadAvatar(file)
+            setProfile((previous) => ({ ...previous, ...updated }))
+            setForm((previous) => ({ ...previous, avatarUrl: updated.avatarUrl || updated.avatar || '' }))
+            updateUser({ avatarUrl: updated.avatarUrl || updated.avatar || '', avatar: updated.avatarUrl || updated.avatar || '' })
+            setNotice('Аватар обновлён')
+        } catch (uploadError) {
+            setError(uploadError?.message || 'Не удалось загрузить аватар')
+        } finally {
+            setUploadingAvatar(false)
+        }
+    }
+
+    const removeAvatar = async () => {
+        setUploadingAvatar(true)
+        setError('')
+        setNotice('')
+        try {
+            const updated = await api.deleteAvatar()
+            setProfile((previous) => ({ ...previous, ...updated }))
+            setForm((previous) => ({ ...previous, avatarUrl: '' }))
+            updateUser({ avatarUrl: '', avatar: '' })
+            setNotice('Аватар удалён')
+        } catch (removeError) {
+            setError(removeError?.message || 'Не удалось удалить аватар')
+        } finally {
+            setUploadingAvatar(false)
+        }
+    }
+
     const save = async (event) => {
         event.preventDefault()
 
         const birthDate = toApiDate(form.birthDate)
+        const username = form.username.trim().replace(/^@/, '')
+
+        if (!/^[A-Za-z0-9_]{3,16}$/.test(username)) {
+            setError('Username: 3–16 символов, латиница, цифры и «_»')
+            setNotice('')
+            return
+        }
+
+        if (!form.displayName.trim()) {
+            setError('Укажите отображаемое имя')
+            setNotice('')
+            return
+        }
 
         if (form.birthDate.trim() && !birthDate) {
             setError(
@@ -142,10 +204,9 @@ export default function Profile() {
             const updated = await api.updateProfile({
                 displayName: form.displayName.trim(),
                 name: form.displayName.trim(),
-                username: form.username.trim().replace(/^@/, ''),
+                username,
                 bio: form.bio.trim(),
                 birthDate,
-                avatarUrl: form.avatarUrl.trim(),
                 statusText: form.statusText.trim(),
                 pronouns: form.pronouns.trim(),
                 website: form.website.trim(),
@@ -156,6 +217,18 @@ export default function Profile() {
                 ...previous,
                 ...updated,
             }))
+            setForm((previous) => ({
+                ...previous,
+                username: updated?.username ?? previous.username,
+                displayName: updated?.displayName ?? previous.displayName,
+            }))
+            updateUser({
+                username: updated?.username,
+                displayName: updated?.displayName,
+                display_name: updated?.displayName,
+                name: updated?.displayName,
+                bio: updated?.bio,
+            })
             setNotice('Изменения сохранены')
         } catch (err) {
             setError(err?.message || 'Не удалось сохранить изменения')
@@ -234,6 +307,18 @@ export default function Profile() {
                                 </div>
                             </section>
 
+                            <div className="profile-avatar-actions">
+                                <label className="btn btn--primary profile-avatar-upload">
+                                    <Icon name="plus" />
+                                    <span>{uploadingAvatar ? 'Загрузка…' : 'Загрузить аватар'}</span>
+                                    <input type="file" accept="image/png,image/jpeg" onChange={uploadAvatar} disabled={uploadingAvatar} />
+                                </label>
+                                {(form.avatarUrl || profile.avatarUrl || profile.avatar) && (
+                                    <button type="button" className="btn btn--ghost" onClick={removeAvatar} disabled={uploadingAvatar}>Удалить аватар</button>
+                                )}
+                                <span className="muted">PNG или JPG · до 5 МБ</span>
+                            </div>
+
                             <form
                                 className="profile-form profile-form--minimal"
                                 onSubmit={save}
@@ -267,7 +352,7 @@ export default function Profile() {
                                                 className="input"
                                                 value={form.username}
                                                 onChange={update('username')}
-                                                maxLength={32}
+                                                maxLength={16}
                                                 placeholder="username"
                                             />
                                         </div>
@@ -287,11 +372,11 @@ export default function Profile() {
                                             className="input"
                                             value={form.bio}
                                             onChange={update('bio')}
-                                            maxLength={500}
+                                            maxLength={255}
                                             rows={3}
                                             placeholder="Пара слов о себе"
                                         />
-                                        <small>{form.bio.length}/500</small>
+                                        <small>{form.bio.length}/255</small>
                                     </div>
 
                                     <div className="profile-form__field">
@@ -311,24 +396,6 @@ export default function Profile() {
 
                                 <section className="profile-edit-section">
                                     <h2>Дополнительно</h2>
-
-                                    <div className="profile-form__field">
-                                        <label htmlFor="profile-avatar-url">
-                                            Ссылка на изображение профиля
-                                        </label>
-                                        <input
-                                            id="profile-avatar-url"
-                                            className="input"
-                                            type="url"
-                                            value={form.avatarUrl}
-                                            onChange={update('avatarUrl')}
-                                            placeholder="https://example.com/avatar.png"
-                                        />
-                                        <small>
-                                            Вставьте прямую ссылку на изображение.
-                                            Предпросмотр обновляется выше.
-                                        </small>
-                                    </div>
 
                                     <div className="profile-form__field">
                                         <label htmlFor="profile-pronouns">

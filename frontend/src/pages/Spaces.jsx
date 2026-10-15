@@ -1,10 +1,15 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
+import VisibilityPicker from '@/components/VisibilityPicker'
 import RightSidebar from '@/components/RightSidebar'
 import PageHeader from '@/components/PageHeader'
 import EmptyState from '@/components/EmptyState'
+import SpaceChannelSidebar from '@/components/SpaceChannelSidebar'
+import SpaceMembersSidebar from '@/components/SpaceMembersSidebar'
+import Avatar from '@/components/Avatar'
 import { api } from '@/api'
 import { useI18n } from '@/i18n'
+import { useAppEvent } from '@/hooks/useAppEvent'
 import Icon from "@/assets/icon/Icon.jsx";
 
 export function Spaces() {
@@ -77,7 +82,11 @@ export function Spaces() {
                                     key={space.id}
                                     to={`/app/spaces/${space.id}`}
                                 >
-                                    <Icon name="users" className="space-card__icon" />
+                                    {space.avatarUrl ? (
+                                        <img className="space-card__avatar" src={space.avatarUrl} alt="" loading="lazy" />
+                                    ) : (
+                                        <Icon name="users" className="space-card__icon" />
+                                    )}
                                     <span className="space-card__name">
                                         {space.name}
                                     </span>
@@ -101,6 +110,7 @@ export function CreateSpace() {
     const navigate = useNavigate()
     const [name, setName] = useState('')
     const [description, setDescription] = useState('')
+    const [isPublic, setIsPublic] = useState(false)
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState('')
 
@@ -113,6 +123,7 @@ export function CreateSpace() {
             const space = await api.createSpace({
                 name: name.trim(),
                 description: description.trim(),
+                isPublic,
             })
 
             navigate(`/app/spaces/${space.id}`)
@@ -155,6 +166,11 @@ export function CreateSpace() {
                             />
                         </div>
 
+                        <div className="settings-form__field">
+                            <label>{t('spaces.visibility')}</label>
+                            <VisibilityPicker value={isPublic} onChange={setIsPublic} disabled={loading} />
+                        </div>
+
                         {error && (
                             <p className="auth-inline-error">{error}</p>
                         )}
@@ -177,7 +193,7 @@ export function CreateSpace() {
 
 export function SpaceDetails() {
     const { t } = useI18n()
-    const { id } = useParams()
+    const { spaceId } = useParams()
     const [space, setSpace] = useState(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState('')
@@ -185,105 +201,76 @@ export function SpaceDetails() {
     const load = useCallback(async () => {
         setLoading(true)
         setError('')
-
         try {
-            const result = await api.getSpace(id)
-            setSpace(result)
+            setSpace(await api.getSpace(spaceId))
         } catch (err) {
             setSpace(null)
             setError(err?.message || t('spaces.loadOneFailed'))
         } finally {
             setLoading(false)
         }
-    }, [id])
+    }, [spaceId])
 
     useEffect(() => {
         load()
     }, [load])
 
+    useAppEvent(['space_updated'], load)
+
+    const [joining, setJoining] = useState(false)
+    const join = async () => {
+        setJoining(true)
+        setError('')
+        try {
+            await api.joinSpace(spaceId)
+            await load()
+        } catch (err) {
+            setError(err?.message || t('spaces.joinFailed'))
+        } finally {
+            setJoining(false)
+        }
+    }
+
     return (
-        <div className="app-layout">
-
-            <main className="main">
-                <div className="main__content">
-                    {loading && <p className="muted">{t('common.loading')}</p>}
-
-                    {!loading && error && (
-                        <>
-                            <p className="auth-inline-error">{error}</p>
-                            <button
-                                type="button"
-                                className="btn btn--ghost"
-                                onClick={load}
-                            >
-                                {t('common.retry')}
-                            </button>
-                        </>
-                    )}
-
-                    {!loading && !error && space && (
-                        <>
-                            <PageHeader title={space.name} />
-
-                            {space.description && (
-                                <p className="muted">{space.description}</p>
+        <div className="app-layout app-layout--space">
+            <SpaceChannelSidebar spaceId={spaceId} spaceName={space?.name} />
+            <main className="space-welcome">
+                {loading && <p className="muted">{t('common.loading')}</p>}
+                {!loading && error && (
+                    <div className="space-welcome__error">
+                        <p className="auth-inline-error">{error}</p>
+                        <button type="button" className="btn btn--ghost" onClick={load}>{t('common.retry')}</button>
+                    </div>
+                )}
+                {!loading && !error && space && (
+                    <div className="space-welcome__inner">
+                        <div className="space-welcome__icon">
+                            {space.avatarUrl || space.avatar_url
+                                ? <Avatar src={space.avatarUrl || space.avatar_url} label={space.name} size={96} />
+                                : (space.name?.slice(0, 1)?.toUpperCase() || 'N')}
+                        </div>
+                        <h1>{space.name}</h1>
+                        <p>{space.description || 'Добро пожаловать в пространство. Выберите канал слева или создайте новый.'}</p>
+                        <div className="space-welcome__actions">
+                            {space.isMember === false && (
+                                <button type="button" className="btn btn--primary" onClick={join} disabled={joining}>
+                                    {t('spaces.join')}
+                                </button>
                             )}
-
-                            <section className="spaces-section">
-                                <h2 className="section-title">{t('spaces.textChannels')}</h2>
-
-                                {space.channels?.length ? (
-                                    <div className="space-channel-list">
-                                        {space.channels.map((channel) => (
-                                            <Link
-                                                key={channel.id}
-                                                className="space-channel"
-                                                to={`/app/channels/${channel.id}`}
-                                            >
-                                                <Icon name="hash" />
-                                                <span>{channel.name}</span>
-                                            </Link>
-                                        ))}
-                                    </div>
-                                ) : (
-                                    <EmptyState
-                                        icon="hash"
-                                        title={t('home.noChannelsTitle')}
-                                        description={t('spaces.noChannelsDesc')}
-                                    />
-                                )}
-                            </section>
-
-                            <section className="spaces-section">
-                                <h2 className="section-title">{t('spaces.voiceRooms')}</h2>
-
-                                {space.voiceRooms?.length ? (
-                                    <div className="space-channel-list">
-                                        {space.voiceRooms.map((room) => (
-                                            <Link
-                                                key={room.id}
-                                                className="space-channel"
-                                                to={`/app/voice/${room.id}`}
-                                            >
-                                                <Icon name="volume-2" />
-                                                <span>{room.name}</span>
-                                            </Link>
-                                        ))}
-                                    </div>
-                                ) : (
-                                    <EmptyState
-                                        icon="volume-2"
-                                        title={t('spaces.noVoiceTitle')}
-                                        description={t('spaces.noVoiceDesc')}
-                                    />
-                                )}
-                            </section>
-                        </>
-                    )}
-                </div>
+                            {space.can?.manageChannels && (
+                                <>
+                                    <button type="button" className="btn btn--primary" onClick={() => window.dispatchEvent(new CustomEvent('nebula-create-channel', { detail: 'text' }))}>＋ Создать текстовый канал</button>
+                                    <button type="button" className="btn btn--ghost" onClick={() => window.dispatchEvent(new CustomEvent('nebula-create-channel', { detail: 'voice' }))}>＋ Голосовой канал</button>
+                                </>
+                            )}
+                            {space.canManage && (
+                                <Link to={`/app/spaces/${spaceId}/settings`} className="btn btn--ghost">{t('ss.title')}</Link>
+                            )}
+                        </div>
+                    </div>
+                )}
             </main>
-
-            <RightSidebar />
+            <SpaceMembersSidebar space={space} />
         </div>
     )
 }

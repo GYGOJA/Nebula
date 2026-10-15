@@ -6,6 +6,7 @@ import { api } from '@/api'
 import { useAuth } from '@/context/AuthContext'
 import { useI18n } from '@/i18n'
 import { navPanel, useNavPanel } from '@/utils/navPanel'
+import { useAppEvent } from '@/hooks/useAppEvent'
 import { NAV_ITEMS, getActiveNavIndex, isNavItemActive } from '@/utils/navItems'
 import Icon from "@/assets/icon/Icon.jsx";
 
@@ -17,7 +18,10 @@ export default function Sidebar() {
     const [spaces, setSpaces] = useState([])
     const [friends, setFriends] = useState([])
     const [loading, setLoading] = useState(true)
+    const [refreshTick, setRefreshTick] = useState(0)
     const panelOpen = useNavPanel()
+
+    useAppEvent(['space_updated', 'space_deleted'], () => setRefreshTick((n) => n + 1))
 
     const activeIndex = getActiveNavIndex(pathname)
     const activeSpaceId = matchPath('/app/spaces/:id', pathname)?.params.id
@@ -53,7 +57,7 @@ export default function Sidebar() {
         return () => {
             alive = false
         }
-    }, [pathname])
+    }, [pathname, refreshTick])
 
     const statusLabel = (status) =>
         status === 'voice'
@@ -144,9 +148,18 @@ export default function Sidebar() {
                                 }`}
                             >
                                 <span className="dock__icon">
-                                    <span className="dock__badge">
-                                        {space.emoji || <Icon name="users" />}
-                                    </span>
+                                    {space.avatarUrl || space.avatar_url ? (
+                                        <Avatar
+                                            src={space.avatarUrl || space.avatar_url}
+                                            label={space.name}
+                                            size={38}
+                                            className="dock__space-avatar"
+                                        />
+                                    ) : (
+                                        <span className="dock__badge">
+                                            {space.emoji || <Icon name="users" />}
+                                        </span>
+                                    )}
                                 </span>
                                 <span className="dock__label">{space.name}</span>
                             </Link>
@@ -201,7 +214,7 @@ export default function Sidebar() {
                                 }`}
                             >
                                 <span className="dock__icon">
-                                    <Avatar label={friend.avatar} size={32} />
+                                    <Avatar src={friend.avatarUrl || friend.avatar_url || friend.avatar} label={friend.displayName || friend.name} size={32} />
                                 </span>
                                 <span className="dock__label">{friend.name}</span>
                                 <span
