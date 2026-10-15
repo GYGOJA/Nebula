@@ -8172,3 +8172,300 @@ body { background: var(--bg); color: var(--text); }
     border-color: #e59a0c !important;
     caret-color: #c97f00;
 }
+
+
+.settings-page .settings-security-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    width: 100%;
+    min-width: 0;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    background: var(--surface);
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.08);
+}
+
+.settings-page .settings-security-card__heading {
+    padding: 24px 26px 20px;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(120deg, rgba(255, 176, 32, 0.09), transparent 65%);
+}
+
+.settings-page .settings-security-card__heading h2 {
+    margin: 0;
+    color: var(--text);
+    font-size: 19px;
+    font-weight: 750;
+}
+
+.settings-page .settings-security-card__heading p {
+    margin: 7px 0 0;
+    color: var(--text-muted);
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.settings-page .settings-security-card .settings-form {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+.settings-page .settings-security-card .settings-form + .settings-form {
+    border-top: 1px solid var(--border);
+}
+
+.settings-page .settings-security-card .settings-form > .profile-edit-section {
+    padding: 22px 26px 26px;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+.settings-page .settings-security-card .settings-security-subtitle {
+    grid-column: 1 / -1;
+    margin: 0 0 1px;
+    color: var(--text);
+    font-size: 15px;
+    font-weight: 750;
+}
+
+.settings-page .settings-security-card .settings-form--email .settings-email-current {
+    margin-top: -7px;
+}
+
+.settings-page .settings-security-card .settings-form--password #password-current,
+.settings-page .settings-security-card .settings-form--password .profile-form__actions {
+    grid-column: 1 / -1;
+}
+
+.settings-page .settings-security-card .settings-form--password .profile-form__field {
+    min-width: 0;
+}
+
+.settings-page .settings-security-card .settings-form--password .profile-form__field .input {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+}
+
+:root[data-theme="light"] .settings-page .settings-security-card {
+    background: #fff;
+    border-color: var(--nebula-light-border);
+    box-shadow: 0 8px 28px rgba(25, 30, 45, 0.05);
+}
+
+@media (max-width: 700px) {
+    .settings-page .settings-security-card__heading {
+        padding: 20px 18px 17px;
+    }
+
+    .settings-page .settings-security-card .settings-form > .profile-edit-section {
+        grid-template-columns: minmax(0, 1fr);
+        padding: 19px 18px 22px;
+    }
+
+    .settings-page .settings-security-card .settings-form--password #password-current,
+    .settings-page .settings-security-card .settings-form--password .profile-form__actions {
+        grid-column: auto;
+    }
+
+    .settings-page .settings-security-card .profile-form__actions .btn {
+        width: 100%;
+    }
+}
+
+.settings-page .settings-security-card__heading {
+    background: var(--surface);
+}
+
+.settings-page .settings-security-card__heading h3 {
+    margin: 0;
+    color: var(--text);
+    font-size: 19px;
+    font-weight: 750;
+}
+
+.settings-page .settings-security-card .settings-form--email .profile-edit-section,
+.settings-page .settings-password-section {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+}
+
+.settings-page .settings-security-card .settings-form--email .profile-edit-section {
+    padding: 22px 26px 26px;
+}
+
+.settings-page .settings-security-card .settings-form--email .profile-form__field,
+.settings-page .settings-password-section .profile-form__field {
+    min-width: 0;
+    margin: 0;
+}
+
+.settings-page .settings-security-card .settings-form--email .input,
+.settings-page .settings-password-section .input {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+}
+
+.settings-page .settings-password-section {
+    padding: 22px 26px 26px;
+    border-top: 1px solid var(--border);
+}
+
+.settings-page .settings-password-section__intro {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+}
+
+.settings-page .settings-password-section__intro p,
+.settings-page .settings-security-hint {
+    margin: 6px 0 0;
+    color: var(--text-muted);
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.settings-page .settings-password-pair {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.settings-page .settings-password-current {
+    width: 100%;
+}
+
+.settings-page .settings-security-card .profile-form__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 0;
+}
+
+.settings-page .settings-security-card .settings-form--password {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+.settings-page .settings-security-card .settings-form--password .profile-edit-section {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+:root[data-theme="light"] .settings-page .settings-security-card__heading {
+    background: #fff;
+}
+
+@media (max-width: 700px) {
+    .settings-page .settings-security-card .settings-form--email .profile-edit-section,
+    .settings-page .settings-password-section {
+        padding: 19px 18px 22px;
+    }
+
+    .settings-page .settings-password-section__intro {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .settings-page .settings-password-pair {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .settings-page .settings-security-card .profile-form__actions .btn {
+        width: 100%;
+    }
+}
+
+
+.settings-page .settings-security-card__heading {
+    background: var(--surface);
+    background-image: none;
+}
+
+.settings-page .settings-email-code-field .otp {
+    display: flex;
+    justify-content: flex-start;
+    gap: 10px;
+    margin-top: 8px;
+}
+
+.settings-page .settings-email-code-field .otp__cell {
+    width: 48px;
+    height: 54px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    outline: none;
+    background: var(--surface-2);
+    color: var(--text);
+    font-size: 21px;
+    font-weight: 650;
+    text-align: center;
+    transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease, background-color 160ms ease;
+    animation: settings-otp-appear 220ms ease both;
+}
+
+.settings-page .settings-email-code-field .otp__cell:nth-child(2) { animation-delay: 25ms; }
+.settings-page .settings-email-code-field .otp__cell:nth-child(3) { animation-delay: 50ms; }
+.settings-page .settings-email-code-field .otp__cell:nth-child(4) { animation-delay: 75ms; }
+.settings-page .settings-email-code-field .otp__cell:nth-child(5) { animation-delay: 100ms; }
+.settings-page .settings-email-code-field .otp__cell:nth-child(6) { animation-delay: 125ms; }
+
+.settings-page .settings-email-code-field .otp__cell:focus {
+    border-color: var(--orange);
+    box-shadow: 0 0 0 3px rgba(255, 173, 31, 0.12);
+    transform: translateY(-2px);
+}
+
+.settings-page .settings-email-code-field .otp__cell:disabled {
+    opacity: 0.65;
+}
+
+.settings-page .settings-email-resend {
+    margin-top: 10px;
+    color: var(--text-muted);
+    font-size: 12px;
+}
+
+.settings-page .settings-email-resend span {
+    color: var(--orange);
+    font-variant-numeric: tabular-nums;
+}
+
+.settings-page .settings-email-resend .auth-link-btn {
+    color: var(--orange);
+    cursor: pointer;
+}
+
+.settings-page .settings-email-resend .auth-link-btn:disabled {
+    cursor: wait;
+    opacity: 0.6;
+}
+
+@keyframes settings-otp-appear {
+    from { opacity: 0; transform: translateY(5px) scale(0.97); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (max-width: 480px) {
+    .settings-page .settings-email-code-field .otp { gap: 6px; }
+    .settings-page .settings-email-code-field .otp__cell { width: min(13vw, 44px); height: 48px; }
+}

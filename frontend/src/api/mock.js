@@ -174,22 +174,24 @@ export const mockApi = {
         return { ok: true }
     },
 
-    async changeEmail({ email, password }) {
+
+    async requestEmailChangeCode({ email }) {
         await wait()
-
         const next = String(email || '').trim().toLowerCase()
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(next)) fail(t('validation.emailInvalid'))
+        if (state.users.some((user) => user.email?.toLowerCase() === next)) fail(t('settings.emailTaken'))
+        state.pendingEmailChange = next
+        return { ok: true, email: next, mockCode: '123456' }
+    },
 
-        if (!next || !password) fail(t('mock.fillFields'))
-
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(next)) {
-            fail(t('validation.emailInvalid'))
-        }
-
-        if (state.users.some((user) => user.email?.toLowerCase() === next)) {
-            fail(t('settings.emailTaken'))
-        }
-
+    async verifyEmailChangeCode({ email, code }) {
+        await wait()
+        const next = String(email || '').trim().toLowerCase()
+        if (!state.pendingEmailChange || state.pendingEmailChange !== next) fail('Сначала запросите код подтверждения')
+        if (String(code || '').trim() !== '123456') fail('Неверный код. Для mock-режима используйте 123456.')
+        if (state.users.some((user) => user.email?.toLowerCase() === next)) fail(t('settings.emailTaken'))
         state.profile = { ...state.profile, email: next }
+        state.pendingEmailChange = ''
         return { ok: true, email: next, user: { ...state.profile } }
     },
 

@@ -5,7 +5,8 @@ import { api } from '@/api'
 import { getLanguage, useI18n } from '@/i18n'
 import CustomSelect from '@/components/CustomSelect'
 import { useAuth } from '@/context/AuthContext'
-import { isEmail } from '@/utils/auth'
+import OtpInput from '@/components/OtpInput'
+import { CODE_LENGTH, RESEND_SECONDS, isEmail } from '@/utils/auth'
 
 const DEFAULT_SETTINGS = {
     theme: 'dark',
@@ -43,8 +44,11 @@ export default function Settings() {
     const { t, language, languages, setLanguage } = useI18n()
     const { user, updateUser } = useAuth()
     const [settings, setSettings] = useState(DEFAULT_SETTINGS)
-    const [emailForm, setEmailForm] = useState({ email: '', password: '' })
+    const [emailForm, setEmailForm] = useState({ email: '', code: '' })
     const [emailSaving, setEmailSaving] = useState(false)
+    const [emailCodeSent, setEmailCodeSent] = useState(false)
+    const [emailResendCooldown, setEmailResendCooldown] = useState(RESEND_SECONDS)
+    const [passwordEditorOpen, setPasswordEditorOpen] = useState(false)
     const [passwords, setPasswords] = useState({
         current: '',
         next: '',
@@ -94,6 +98,12 @@ export default function Settings() {
     useEffect(() => {
         load()
     }, [load])
+
+    useEffect(() => {
+        if (!emailCodeSent || emailResendCooldown <= 0) return undefined
+        const timer = window.setTimeout(() => setEmailResendCooldown((value) => value - 1), 1000)
+        return () => window.clearTimeout(timer)
+    }, [emailCodeSent, emailResendCooldown])
 
     const persistLocalPreferences = (nextSettings) => {
         try {
@@ -192,7 +202,7 @@ export default function Settings() {
 
         if (passwords.next !== passwords.confirm) {
             setError(t('settings.passwordsMismatch'))
-            return
+            return false
         }
 
         setPasswordSaving(true)
@@ -210,10 +220,12 @@ export default function Settings() {
             })
 
             setNotice(t('settings.passwordChanged'))
+            return true
         } catch (err) {
             setError(
                 err?.message || t('settings.changePasswordFailed')
             )
+            return false
         } finally {
             setPasswordSaving(false)
         }
@@ -239,16 +251,26 @@ export default function Settings() {
         setEmailSaving(true)
 
         try {
-            const result = await api.changeEmail({
-                email: next,
-                password: emailForm.password,
-            })
-
-            updateUser({ email: result?.email || next })
-            setEmailForm({ email: '', password: '' })
-            setNotice(t('settings.emailChanged'))
+            if (!emailCodeSent) {
+                await api.requestEmailChangeCode({ email: next })
+                setEmailCodeSent(true)
+                setEmailResendCooldown(RESEND_SECONDS)
+                setNotice('Код подтверждения отправлен на новый адрес почты.')
+            } else {
+                const result = await api.verifyEmailChangeCode({
+                    email: next,
+                    code: emailForm.code.trim(),
+                })
+                updateUser({ email: result?.email || next })
+                setEmailForm({ email: '', code: '' })
+                setEmailCodeSent(false)
+                setEmailResendCooldown(RESEND_SECONDS)
+                setNotice(t('settings.emailChanged'))
+            }
         } catch (err) {
-            setError(err?.message || t('settings.changeEmailFailed'))
+            setError(err?.message || (emailCodeSent
+                ? 'Не удалось подтвердить код'
+                : 'Не удалось отправить код'))
         } finally {
             setEmailSaving(false)
         }
@@ -406,12 +428,17 @@ export default function Settings() {
                                 </div>
                             </form>
 
+                            <div className="settings-security-card">
+                                <div className="settings-security-card__heading">
+                                    <h3 className="settings-security-subtitle">{t('settings.security')}</h3>
+                                    <p>Управление почтой и паролем аккаунта</p>
+                                </div>
                             <form
                                 className="profile-form profile-form--minimal settings-form settings-form--email"
                                 onSubmit={changeEmail}
                             >
                                 <section className="profile-edit-section">
-                                    <h2>{t('settings.emailSection')}</h2>
+                                    <h3 className="settings-security-subtitle">{t('settings.emailSection')}</h3>
 
                                     <p className="settings-email-current">
                                         {t('settings.emailCurrent')}{' '}
@@ -419,10 +446,7 @@ export default function Settings() {
                                     </p>
 
                                     <div className="profile-form__field">
-                                        <label htmlFor="email-next">
-                                            {t('settings.emailNew')}
-                                        </label>
-
+                                        <label htmlFor="email-next">Новый адрес почты</label>
                                         <input
                                             id="email-next"
                                             className="input"
@@ -430,136 +454,171 @@ export default function Settings() {
                                             autoComplete="email"
                                             placeholder="name@company.com"
                                             value={emailForm.email}
-                                            onChange={(event) =>
+                                            onChange={(event) => {
                                                 setEmailForm((previous) => ({
                                                     ...previous,
                                                     email: event.target.value,
+                                                    code: '',
                                                 }))
-                                            }
+                                                setEmailCodeSent(false)
+                                                setEmailResendCooldown(RESEND_SECONDS)
+                                            }}
                                             required
                                         />
                                     </div>
 
-                                    <div className="profile-form__field">
-                                        <label htmlFor="email-password">
-                                            {t('settings.emailConfirmPassword')}
-                                        </label>
-
-                                        <input
-                                            id="email-password"
-                                            className="input"
-                                            type="password"
-                                            autoComplete="current-password"
-                                            value={emailForm.password}
-                                            onChange={(event) =>
-                                                setEmailForm((previous) => ({
-                                                    ...previous,
-                                                    password: event.target.value,
-                                                }))
-                                            }
-                                            required
-                                        />
-                                    </div>
+                                    {emailCodeSent && (
+                                        <div className="profile-form__field settings-email-code-field">
+                                            <label>Код из письма</label>
+                                            <p className="settings-security-hint">
+                                                Введите код, отправленный на {emailForm.email.trim()}.
+                                            </p>
+                                            <OtpInput
+                                                length={CODE_LENGTH}
+                                                value={emailForm.code}
+                                                onChange={(code) => setEmailForm((previous) => ({ ...previous, code }))}
+                                                disabled={emailSaving}
+                                            />
+                                            <p className="settings-email-resend">
+                                                {emailResendCooldown > 0 ? (
+                                                    <>Отправить код снова через <span>{Math.floor(emailResendCooldown / 60)}:{String(emailResendCooldown % 60).padStart(2, '0')}</span></>
+                                                ) : (
+                                                    <button
+                                                        type="button"
+                                                        className="auth-link-btn"
+                                                        disabled={emailSaving}
+                                                        onClick={async () => {
+                                                            setError('')
+                                                            setNotice('')
+                                                            setEmailSaving(true)
+                                                            try {
+                                                                await api.requestEmailChangeCode({ email: emailForm.email.trim().toLowerCase() })
+                                                                setEmailForm((previous) => ({ ...previous, code: '' }))
+                                                                setEmailResendCooldown(RESEND_SECONDS)
+                                                                setNotice('Новый код отправлен на почту.')
+                                                            } catch (err) {
+                                                                setError(err?.message || 'Не удалось повторно отправить код')
+                                                            } finally {
+                                                                setEmailSaving(false)
+                                                            }
+                                                        }}
+                                                    >Отправить код снова</button>
+                                                )}
+                                            </p>
+                                        </div>
+                                    )}
 
                                     <div className="profile-form__actions">
                                         <button
                                             className="btn btn--primary"
                                             type="submit"
-                                            disabled={emailSaving}
+                                            disabled={emailSaving || (emailCodeSent && emailForm.code.length !== CODE_LENGTH)}
                                         >
                                             {emailSaving
-                                                ? t('common.saving')
-                                                : t('settings.changeEmail')}
+                                                ? 'Подождите…'
+                                                : emailCodeSent
+                                                    ? 'Подтвердить почту'
+                                                    : 'Отправить код'}
                                         </button>
+                                        {emailCodeSent && (
+                                            <button
+                                                className="btn btn--secondary"
+                                                type="button"
+                                                onClick={() => {
+                                                    setEmailCodeSent(false)
+                                                    setEmailForm((previous) => ({ ...previous, code: '' }))
+                                                    setError('')
+                                                    setNotice('')
+                                                }}
+                                            >
+                                                Изменить адрес
+                                            </button>
+                                        )}
                                     </div>
                                 </section>
                             </form>
 
-                            <form
-                                className="profile-form profile-form--minimal settings-form settings-form--password"
-                                onSubmit={changePassword}
-                            >
-                                <section className="profile-edit-section">
-                                    <h2>{t('settings.security')}</h2>
-
-                                    <div className="profile-form__field">
-                                        <label htmlFor="password-current">
-                                            {t('settings.currentPassword')}
-                                        </label>
-
-                                        <input
-                                            id="password-current"
-                                            className="input"
-                                            type="password"
-                                            autoComplete="current-password"
-                                            value={passwords.current}
-                                            onChange={(event) =>
-                                                setPasswords((previous) => ({
-                                                    ...previous,
-                                                    current: event.target.value,
-                                                }))
-                                            }
-                                            required
-                                        />
+                            <section className="settings-password-section">
+                                <div className="settings-password-section__intro">
+                                    <div>
+                                        <h3 className="settings-security-subtitle">Пароль</h3>
+                                        <p>Регулярно обновляйте пароль, чтобы защитить аккаунт.</p>
                                     </div>
+                                    <button
+                                        className="btn btn--secondary"
+                                        type="button"
+                                        onClick={() => {
+                                            setPasswordEditorOpen((open) => !open)
+                                            setPasswords({ current: '', next: '', confirm: '' })
+                                            setError('')
+                                            setNotice('')
+                                        }}
+                                    >
+                                        {passwordEditorOpen ? 'Отмена' : 'Изменить пароль'}
+                                    </button>
+                                </div>
 
-                                    <div className="profile-form__field">
-                                        <label htmlFor="password-next">
-                                            {t('settings.newPassword')}
-                                        </label>
+                                {passwordEditorOpen && (
+                                    <form
+                                        className="profile-form profile-form--minimal settings-form settings-form--password"
+                                        onSubmit={async (event) => {
+                                            const changed = await changePassword(event)
+                                            if (changed) setPasswordEditorOpen(false)
+                                        }}
+                                    >
+                                        <section className="profile-edit-section">
+                                            <div className="profile-form__field settings-password-current">
+                                                <label htmlFor="password-current">Старый пароль</label>
+                                                <input
+                                                    id="password-current"
+                                                    className="input"
+                                                    type="password"
+                                                    autoComplete="current-password"
+                                                    value={passwords.current}
+                                                    onChange={(event) => setPasswords((previous) => ({ ...previous, current: event.target.value }))}
+                                                    required
+                                                />
+                                            </div>
 
-                                        <input
-                                            id="password-next"
-                                            className="input"
-                                            type="password"
-                                            autoComplete="new-password"
-                                            minLength={8}
-                                            value={passwords.next}
-                                            onChange={(event) =>
-                                                setPasswords((previous) => ({
-                                                    ...previous,
-                                                    next: event.target.value,
-                                                }))
-                                            }
-                                            required
-                                        />
-                                    </div>
+                                            <div className="settings-password-pair">
+                                                <div className="profile-form__field">
+                                                    <label htmlFor="password-next">Новый пароль</label>
+                                                    <input
+                                                        id="password-next"
+                                                        className="input"
+                                                        type="password"
+                                                        autoComplete="new-password"
+                                                        minLength={8}
+                                                        value={passwords.next}
+                                                        onChange={(event) => setPasswords((previous) => ({ ...previous, next: event.target.value }))}
+                                                        required
+                                                    />
+                                                </div>
+                                                <div className="profile-form__field">
+                                                    <label htmlFor="password-confirm">Подтверждение нового пароля</label>
+                                                    <input
+                                                        id="password-confirm"
+                                                        className="input"
+                                                        type="password"
+                                                        autoComplete="new-password"
+                                                        minLength={8}
+                                                        value={passwords.confirm}
+                                                        onChange={(event) => setPasswords((previous) => ({ ...previous, confirm: event.target.value }))}
+                                                        required
+                                                    />
+                                                </div>
+                                            </div>
 
-                                    <div className="profile-form__field">
-                                        <label htmlFor="password-confirm">
-                                            {t('settings.repeatPassword')}
-                                        </label>
-
-                                        <input
-                                            id="password-confirm"
-                                            className="input"
-                                            type="password"
-                                            autoComplete="new-password"
-                                            minLength={8}
-                                            value={passwords.confirm}
-                                            onChange={(event) =>
-                                                setPasswords((previous) => ({
-                                                    ...previous,
-                                                    confirm: event.target.value,
-                                                }))
-                                            }
-                                            required
-                                        />
-                                    </div>
-
-                                    <div className="profile-form__actions">
-                                        <button
-                                            className="btn btn--primary"
-                                            type="submit"
-                                            disabled={passwordSaving}
-                                        >
-                                            {passwordSaving
-                                                ? t('common.saving')
-                                                : t('settings.changePassword')}
-                                        </button>
-                                    </div>
-                                </section>
-                            </form>
+                                            <div className="profile-form__actions">
+                                                <button className="btn btn--primary" type="submit" disabled={passwordSaving}>
+                                                    {passwordSaving ? 'Сохранение…' : 'Сохранить новый пароль'}
+                                                </button>
+                                            </div>
+                                        </section>
+                                    </form>
+                                )}
+                            </section>
+                            </div>
                         </>
                     )}
                 </div>
