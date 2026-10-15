@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="SqlDialectMappings">
+    <file url="file://$PROJECT_DIR$/migrations/000001_create_user_table.down.sql" dialect="GenericSQL" />
+    <file url="file://$PROJECT_DIR$/migrations/000001_create_user_table.up.sql" dialect="GenericSQL" />
+    <file url="file://$PROJECT_DIR$/migrations/000002_create_refresh_token_table.down.sql" dialect="GenericSQL" />
+    <file url="file://$PROJECT_DIR$/migrations/000002_create_refresh_token_table.up.sql" dialect="GenericSQL" />
+    <file url="file://$PROJECT_DIR$/migrations/000003_create_friendship_table.down.sql" dialect="GenericSQL" />
+    <file url="file://$PROJECT_DIR$/migrations/000003_create_friendship_table.up.sql" dialect="GenericSQL" />
+    <file url="file://$PROJECT_DIR$/migrations/000004_profile_and_dm.down.sql" dialect="GenericSQL" />
+    <file url="file://$PROJECT_DIR$/migrations/000004_profile_and_dm.up.sql" dialect="GenericSQL" />
+    <file url="file://$PROJECT_DIR$/migrations/000005_dm_attachments_and_read.down.sql" dialect="GenericSQL" />
+    <file url="file://$PROJECT_DIR$/migrations/000005_dm_attachments_and_read.up.sql" dialect="GenericSQL" />
+    <file url="file://$PROJECT_DIR$/migrations/000006_spaces_channels.down.sql" dialect="GenericSQL" />
+    <file url="file://$PROJECT_DIR$/migrations/000006_spaces_channels.up.sql" dialect="GenericSQL" />
+    <file url="file://$PROJECT_DIR$/migrations/000007_fix_space_description.down.sql" dialect="GenericSQL" />
+    <file url="file://$PROJECT_DIR$/migrations/000007_fix_space_description.up.sql" dialect="GenericSQL" />
+    <file url="file://$PROJECT_DIR$/migrations/000008_space_invites.down.sql" dialect="GenericSQL" />
+    <file url="file://$PROJECT_DIR$/migrations/000008_space_invites.up.sql" dialect="GenericSQL" />
+    <file url="file://$PROJECT_DIR$/migrations/000009_space_avatars.down.sql" dialect="GenericSQL" />
+    <file url="file://$PROJECT_DIR$/migrations/000009_space_avatars.up.sql" dialect="GenericSQL" />
+    <file url="file://$PROJECT_DIR$/migrations/000010_channel_attachments.down.sql" dialect="GenericSQL" />
+    <file url="file://$PROJECT_DIR$/migrations/000010_channel_attachments.up.sql" dialect="GenericSQL" />
+    <file url="file://$PROJECT_DIR$/migrations/000011_space_roles.down.sql" dialect="GenericSQL" />
+    <file url="file://$PROJECT_DIR$/migrations/000011_space_roles.up.sql" dialect="GenericSQL" />
+    <file url="file://$PROJECT_DIR$/migrations/000012_message_actions_and_profile_banner.down.sql" dialect="GenericSQL" />
+    <file url="file://$PROJECT_DIR$/migrations/000012_message_actions_and_profile_banner.up.sql" dialect="GenericSQL" />
+    <file url="file://$PROJECT_DIR$/migrations/000013_remove_profile_banner.down.sql" dialect="GenericSQL" />
+    <file url="file://$PROJECT_DIR$/migrations/000013_remove_profile_banner.up.sql" dialect="GenericSQL" />
+  </component>
+</project>

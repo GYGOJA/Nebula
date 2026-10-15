@@ -14,7 +14,6 @@ export const canRecordVoice = () =>
     typeof MediaRecorder !== 'undefined' &&
     !!navigator.mediaDevices?.getUserMedia
 
-// Запись голоса: start() -> stop() даёт { file, duration }, cancel() выбрасывает запись.
 export function useVoiceRecorder() {
     const [recording, setRecording] = useState(false)
     const [elapsed, setElapsed] = useState(0)
@@ -79,7 +78,6 @@ export function useVoiceRecorder() {
         return true
     }, [])
 
-    // keep=false — отмена. Возвращает Promise<{ file, duration } | null>.
     const finish = useCallback((keep) => new Promise((resolve) => {
         const recorder = recorderRef.current
 

@@ -25,4 +25,5 @@ export function formatDuration(ms) {
 }
 
 export const MAX_FILE_BYTES = 25 * 1024 * 1024
+export const MAX_IMAGE_BYTES = 10 * 1024 * 1024
 export const MAX_FILES = 10

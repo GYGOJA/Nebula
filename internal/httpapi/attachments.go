@@ -18,6 +18,7 @@ import (
 
 const (
 	maxAttachmentBytes   = 25 << 20
+	maxImageBytes        = 10 << 20
 	maxAttachmentsPerMsg = 10
 	maxUploadRequest     = 100 << 20
 	maxVoiceMs           = 15 * 60 * 1000
@@ -35,10 +36,14 @@ type Attachment struct {
 }
 
 func (a Attachment) dto() map[string]any {
+	return a.dtoAt("/api/dm/attachments/")
+}
+
+func (a Attachment) dtoAt(base string) map[string]any {
 	d := map[string]any{
 		"id": a.ID, "kind": a.Kind, "name": a.FileName,
 		"mime": a.Mime, "size": a.Size,
-		"url": "/api/dm/attachments/" + a.ID.String(),
+		"url": base + a.ID.String(),
 	}
 	if a.DurationMs != nil {
 		d["durationMs"] = *a.DurationMs
@@ -93,6 +98,7 @@ func classify(sniffed, declared string, voice bool) (kind, mimeType string, ok b
 	declared = baseMime(declared)
 
 	if voice {
+
 		okSniff := strings.HasPrefix(sniffed, "audio/") || sniffed == "video/webm" ||
 			sniffed == "video/mp4" || sniffed == "application/ogg" || sniffed == "application/octet-stream"
 		if !okSniff || !strings.HasPrefix(declared, "audio/") {
@@ -112,6 +118,7 @@ func classify(sniffed, declared string, voice bool) (kind, mimeType string, ok b
 		}
 		return "audio", sniffed, true
 	}
+
 	return "file", "application/octet-stream", true
 }
 
@@ -131,6 +138,18 @@ type uploadError struct{ msg string }
 func (e *uploadError) Error() string { return e.msg }
 
 func saveUpload(h *multipart.FileHeader, voice bool, durationMs *int) (*savedFile, error) {
+	return saveUploadIn(attachmentDir(), h, voice, durationMs)
+}
+
+func channelAttachmentDir() string {
+	dir := os.Getenv("UPLOAD_DIR")
+	if dir == "" {
+		dir = "uploads"
+	}
+	return filepath.Join(dir, "channels")
+}
+
+func saveUploadIn(dir string, h *multipart.FileHeader, voice bool, durationMs *int) (*savedFile, error) {
 	if h.Size > maxAttachmentBytes {
 		return nil, &uploadError{fmt.Sprintf("Файл «%s» больше 25 МБ", sanitizeFileName(h.Filename))}
 	}
@@ -145,18 +164,21 @@ func saveUpload(h *multipart.FileHeader, voice bool, durationMs *int) (*savedFil
 	head = head[:n]
 	kind, mimeType, ok := classify(http.DetectContentType(head), h.Header.Get("Content-Type"), voice)
 	if !ok {
-		return nil, &uploadError{"Неподдерживаемый формат голосового сообщения"}
+		return nil, &uploadError{"Неподдерживаемый формат файла"}
+	}
+	if strings.HasPrefix(mimeType, "image/") && h.Size > maxImageBytes {
+		return nil, &uploadError{fmt.Sprintf("Изображение «%s» больше 10 МБ", sanitizeFileName(h.Filename))}
 	}
 	if _, err := src.Seek(0, io.SeekStart); err != nil {
 		return nil, &uploadError{"Не удалось прочитать файл"}
 	}
 
-	if err := os.MkdirAll(attachmentDir(), 0o750); err != nil {
+	if err := os.MkdirAll(dir, 0o750); err != nil {
 		return nil, err
 	}
 	id := uuid.New()
 	key := id.String()
-	path := filepath.Join(attachmentDir(), key)
+	path := filepath.Join(dir, key)
 	dst, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o640)
 	if err != nil {
 		return nil, err
@@ -234,7 +256,11 @@ func (s *Server) attachmentFile(w http.ResponseWriter, r *http.Request, me uuid.
 		http.NotFound(w, r)
 		return
 	}
-	f, err := os.Open(filepath.Join(attachmentDir(), filepath.Base(a.StorageKey)))
+	serveStoredFile(w, r, a, attachmentDir())
+}
+
+func serveStoredFile(w http.ResponseWriter, r *http.Request, a Attachment, dir string) {
+	f, err := os.Open(filepath.Join(dir, filepath.Base(a.StorageKey)))
 	if err != nil {
 		http.NotFound(w, r)
 		return
@@ -246,10 +272,12 @@ func (s *Server) attachmentFile(w http.ResponseWriter, r *http.Request, me uuid.
 	h.Set("X-Content-Type-Options", "nosniff")
 	h.Set("Cache-Control", "private, max-age=3600")
 	h.Set("Content-Security-Policy", "default-src 'none'; sandbox")
+
 	disposition := "inline"
 	if a.Kind == "file" || r.URL.Query().Get("download") == "1" {
 		disposition = "attachment"
 	}
 	h.Set("Content-Disposition", mime.FormatMediaType(disposition, map[string]string{"filename": a.FileName}))
+
 	http.ServeContent(w, r, "", time.Time{}, f)
 }

@@ -1,10 +1,9 @@
-export default function EmptyState({ title, description, action }) {
+import Icon from "@/assets/icon/Icon.jsx";
+
+export default function EmptyState({ icon, title, description, action }) {
     return (
         <div className="empty-state">
-            <span
-                className="icon-placeholder empty-state__icon"
-                aria-hidden="true"
-            />
+            {icon && <Icon name={icon} className="empty-state__icon" />}
 
             {title && (
                 <h3 className="empty-state__title">{title}</h3>

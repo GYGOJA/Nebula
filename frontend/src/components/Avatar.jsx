@@ -1,40 +1,30 @@
+import { useState } from 'react'
 import { useI18n } from '@/i18n'
-import { assetUrl } from '@/api/client'
+import { resolveAssetURL } from '@/api/client'
+import Icon from '@/assets/icon/Icon.jsx'
 
-export default function Avatar({
-                                   src,
-                                   label = '',
-                                   size = 40,
-                                   className = '',
-                               }) {
+export default function Avatar({ src, label = '', size = 40, className = '' }) {
     const { t } = useI18n()
+    src = typeof src === 'string' ? src.trim() : ''
+    const [failedSrc, setFailedSrc] = useState(null)
     const classes = ['avatar', className].filter(Boolean).join(' ')
 
     return (
         <span
             className={classes}
-            style={{
-                width: size,
-                height: size,
-                flexBasis: size,
-            }}
+            style={{ width: size, height: size, flexBasis: size }}
             aria-label={label || t('common.userAvatar')}
         >
-            {src ? (
+            {src && src !== failedSrc ? (
                 <img
                     className="avatar__image"
-                    src={assetUrl(src)}
+                    src={resolveAssetURL(src)}
                     alt=""
                     loading="lazy"
-                    onError={(event) => {
-                        event.currentTarget.style.display = 'none'
-                    }}
+                    onError={() => setFailedSrc(src)}
                 />
             ) : (
-                <span
-                    className="icon-placeholder avatar__placeholder"
-                    aria-hidden="true"
-                />
+                <Icon name="user" className="avatar__placeholder" />
             )}
         </span>
     )

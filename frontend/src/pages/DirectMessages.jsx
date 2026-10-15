@@ -1,7 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import NavigationRail from '@/components/NavigationRail'
-import Sidebar from '@/components/Sidebar'
 import RightSidebar from '@/components/RightSidebar'
 import PageHeader from '@/components/PageHeader'
 import Avatar from '@/components/Avatar'
@@ -10,6 +8,9 @@ import MessageItem from '@/components/MessageItem'
 import MessageComposer from '@/components/MessageComposer'
 import { api } from '@/api'
 import { useNotifications } from '@/context/NotificationsContext'
+import { useCall } from '@/context/CallContext'
+import VoiceStage from '@/components/VoiceStage'
+import Icon from '@/assets/icon/Icon.jsx'
 import { useI18n } from '@/i18n'
 
 export function DmList() {
@@ -36,7 +37,6 @@ export function DmList() {
         load()
     }, [load])
 
-    // Новые сообщения и «прочитано» обновляют список без перезагрузки страницы.
     const { subscribe, unread } = useNotifications()
 
     useEffect(() => subscribe((event) => {
@@ -63,8 +63,6 @@ export function DmList() {
 
     return (
         <div className="app-layout">
-            <NavigationRail />
-            <Sidebar />
 
             <main className="main">
                 <div className="main__content">
@@ -133,7 +131,6 @@ export function DmList() {
     )
 }
 
-// Запасной опрос на случай, когда поток событий недоступен.
 const POLL_MS = 15000
 
 const formatTime = (message) => {
@@ -156,6 +153,7 @@ export function DmChat() {
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState('')
     const [sendError, setSendError] = useState('')
+    const [replyTo, setReplyTo] = useState(null)
     const bottomRef = useRef(null)
     const lastIdRef = useRef(null)
 
@@ -201,11 +199,10 @@ export function DmChat() {
                 return same ? previous : result.map(normalize)
             })
         } catch {
-            // временная ошибка сети: попробуем позже
+
         }
     }, [userId])
 
-    // Входящие сообщения и отметки «прочитано» приходят по SSE.
     useEffect(() => subscribe((event) => {
         if (event.type === 'reconnected') {
             refetch()
@@ -225,6 +222,13 @@ export function DmChat() {
             )
         }
 
+        if (event.type === 'message_updated' && String(event.data?.peerId) === String(userId)) {
+            setMessages((previous) => previous.map((item) => String(item.id) === String(event.data.messageId)
+                ? { ...item, text: event.data.text, content: event.data.text, editedAt: event.data.editedAt } : item))
+        }
+        if (event.type === 'message_deleted' && String(event.data?.peerId) === String(userId)) {
+            setMessages((previous) => previous.filter((item) => String(item.id) !== String(event.data.messageId)))
+        }
         if (event.type === 'read' && event.data?.peerId === userId) {
             const ids = new Set(event.data.ids)
 
@@ -236,7 +240,6 @@ export function DmChat() {
         }
     }), [subscribe, userId, refetch])
 
-    // Открыли чат — всё, что пришло, считается прочитанным (и при возврате на вкладку).
     useEffect(() => {
         if (loading || error) return undefined
 
@@ -271,29 +274,42 @@ export function DmChat() {
         }
     }, [messages])
 
-    const send = async (text, options) => {
+    const send = async (text, options = {}) => {
         setSendError('')
-
         try {
             const message = await api.sendDm(userId, text, options)
-
-            setMessages((previous) =>
-                previous.some((item) => item.id === message.id)
-                    ? previous
-                    : [...previous, normalize(message)]
-            )
+            setMessages((previous) => previous.some((item) => item.id === message.id) ? previous : [...previous, normalize(message)])
         } catch (err) {
             setSendError(err?.message || t('dm.sendFailed'))
             throw err
         }
     }
 
+    const editMessage = async (messageId, text) => {
+        const result = await api.editDmMessage(userId, messageId, text)
+        setMessages((previous) => previous.map((item) => String(item.id) === String(messageId)
+            ? { ...item, text: result.text || text, content: result.text || text, editedAt: result.editedAt } : item))
+    }
+
+    const deleteMessage = async (messageId) => {
+        await api.deleteDmMessage(userId, messageId)
+        setMessages((previous) => previous.filter((item) => String(item.id) !== String(messageId)))
+    }
+
+    const beginReply = (message) => setReplyTo({
+        id: message.id,
+        text: message.text || message.attachments?.[0]?.name || '',
+        authorName: message.author?.displayName || message.author?.name || peerName || t('common.unknownAuthor'),
+    })
+
     const peerName = peer?.displayName || peer?.name
+    const { active, startCall } = useCall()
+    const callHere = active?.kind === 'call' && String(active.peer?.id) === String(userId)
+    const callBusy = Boolean(active)
+    const callPeer = peer ? { ...peer, id: userId } : null
 
     return (
         <div className="app-layout">
-            <NavigationRail />
-            <Sidebar />
 
             <main className="chat">
                 <header className="chat__header">
@@ -315,7 +331,35 @@ export function DmChat() {
                             <div className="chat__sub">@{peer.username}</div>
                         )}
                     </div>
+
+                    <div className="chat__header-spacer" />
+
+                    <div className="chat__call-actions">
+                        <button
+                            type="button"
+                            className="chat__call-btn"
+                            onClick={() => startCall(callPeer, false)}
+                            disabled={callBusy || !callPeer}
+                            title={t('dm.callAudio')}
+                            aria-label={t('dm.callAudio')}
+                        >
+                            <Icon name="phone" />
+                        </button>
+
+                        <button
+                            type="button"
+                            className="chat__call-btn"
+                            onClick={() => startCall(callPeer, true)}
+                            disabled={callBusy || !callPeer}
+                            title={t('dm.callVideo')}
+                            aria-label={t('dm.callVideo')}
+                        >
+                            <Icon name="video" />
+                        </button>
+                    </div>
                 </header>
+
+                {callHere && <VoiceStage roomId={active.roomId} />}
 
                 <div className="chat__messages">
                     {loading && <p className="muted">{t('common.loading')}</p>}
@@ -345,6 +389,10 @@ export function DmChat() {
                             key={message.id}
                             message={message}
                             author={message.author}
+                            maxLength={4000}
+                            onReply={beginReply}
+                            onEdit={editMessage}
+                            onDelete={deleteMessage}
                         />
                     ))}
 
@@ -360,6 +408,8 @@ export function DmChat() {
                     onSend={send}
                     disabled={loading || !!error}
                     allowAttachments
+                    replyTo={replyTo}
+                    onCancelReply={() => setReplyTo(null)}
                 />
             </main>
 

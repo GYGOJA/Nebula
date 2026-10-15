@@ -1,7 +1,9 @@
-import { useCallback, useEffect } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { RouterProvider } from 'react-router-dom'
 import { router } from './router'
 import { AuthProvider } from './context/AuthContext'
+import SplashScreen from './components/SplashScreen'
+import { resolveAppearance } from './utils/theme'
 
 function readPreferences() {
     try {
@@ -12,18 +14,9 @@ function readPreferences() {
 }
 
 function applyPreferences() {
-    const preferences = readPreferences()
-    const theme = preferences.theme || 'dark'
-
-    const resolvedTheme =
-        theme === 'system'
-            ? window.matchMedia('(prefers-color-scheme: light)').matches
-                ? 'light'
-                : 'dark'
-            : theme
-
-    document.documentElement.dataset.theme =
-        resolvedTheme === 'light' ? 'light' : 'dark'
+    const { theme, mascot } = resolveAppearance(readPreferences().theme)
+    document.documentElement.dataset.theme = theme
+    document.documentElement.dataset.mascotBackground = mascot ? 'on' : 'off'
 }
 
 if (typeof window !== 'undefined' && typeof document !== 'undefined') {
@@ -31,6 +24,9 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
 }
 
 export default function App() {
+    const [booted, setBooted] = useState(false)
+    const handleReady = useCallback(() => setBooted(true), [])
+
     const syncPreferences = useCallback(() => {
         applyPreferences()
     }, [])
@@ -75,7 +71,8 @@ export default function App() {
 
     return (
         <AuthProvider>
-            <RouterProvider router={router} />
+            {booted && <RouterProvider router={router} />}
+            <SplashScreen onReady={handleReady} />
         </AuthProvider>
     )
 }

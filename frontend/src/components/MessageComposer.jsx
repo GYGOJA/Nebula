@@ -1,7 +1,8 @@
+import Icon from '@/assets/icon/Icon.jsx'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useI18n } from '@/i18n'
 import { canRecordVoice, useVoiceRecorder } from '@/hooks/useVoiceRecorder'
-import { formatBytes, formatDuration, MAX_FILE_BYTES, MAX_FILES } from '@/utils/format'
+import { formatBytes, formatDuration, MAX_FILE_BYTES, MAX_IMAGE_BYTES, MAX_FILES } from '@/utils/format'
 
 function Chip({ file, onRemove, disabled, language }) {
     const isImage = file.type.startsWith('image/')
@@ -36,6 +37,8 @@ export default function MessageComposer({
     onSend,
     disabled = false,
     allowAttachments = false,
+    replyTo = null,
+    onCancelReply,
 }) {
     const { t, language } = useI18n()
     const resolvedPlaceholder = placeholder ?? t('messages.placeholder')
@@ -63,6 +66,7 @@ export default function MessageComposer({
 
         for (const file of incoming) {
             if (file.size === 0) message = t('attach.empty', { name: file.name })
+            else if (file.type.startsWith('image/') && file.size > MAX_IMAGE_BYTES) message = `${file.name}: изображение должно быть не больше 10 МБ`
             else if (file.size > MAX_FILE_BYTES) message = t('attach.tooBig', { name: file.name })
             else accepted.push(file)
         }
@@ -101,13 +105,15 @@ export default function MessageComposer({
         if (!canSend) return
 
         const value = text.trim()
-        const options = files.length
-            ? { files, onProgress: setProgress }
-            : undefined
+        const options = {
+            ...(files.length ? { files, onProgress: setProgress } : {}),
+            ...(replyTo?.id ? { replyToId: replyTo.id } : {}),
+        }
 
         if (await submit({ text: value, options })) {
             setText('')
             setFiles([])
+            onCancelReply?.()
             textarea.current?.focus()
         }
     }
@@ -117,10 +123,12 @@ export default function MessageComposer({
 
         if (!result) return
 
-        await submit({
+        if (await submit({
             text: '',
-            options: { files: [result.file], voice: true, duration: result.duration, onProgress: setProgress },
-        })
+            options: { files: [result.file], voice: true, duration: result.duration, onProgress: setProgress, ...(replyTo?.id ? { replyToId: replyTo.id } : {}) },
+        })) {
+            onCancelReply?.()
+        }
     }
 
     const handleKeyDown = (event) => {
@@ -170,6 +178,13 @@ export default function MessageComposer({
         <div className={`chat__composer ${dragging ? 'chat__composer--drag' : ''}`} {...dragProps}>
             {dragging && <div className="composer-drop">{t('attach.dropHere')}</div>}
 
+            {replyTo && (
+                <div className="composer-reply">
+                    <div><strong>{t('messages.replyingTo')} {replyTo.authorName || replyTo.author?.displayName || replyTo.author?.name || t('common.unknownAuthor')}</strong><span>{replyTo.text || t('attach.file')}</span></div>
+                    <button type="button" onClick={onCancelReply} aria-label={t('common.cancel')}>×</button>
+                </div>
+            )}
+
             {files.length > 0 && (
                 <div className="composer-chips">
                     {files.map((file, index) => (
@@ -202,7 +217,7 @@ export default function MessageComposer({
                             title={t('attach.cancelRecording')}
                             aria-label={t('attach.cancelRecording')}
                         >
-                            ✕
+                            <Icon name="x" />
                         </button>
 
                         <div className="composer-recording" aria-live="polite">
@@ -218,7 +233,7 @@ export default function MessageComposer({
                             title={t('messages.send')}
                             aria-label={t('attach.sendVoice')}
                         >
-                            <span className="icon-placeholder" aria-hidden="true" />
+                            <Icon name="send" />
                         </button>
                     </>
                 ) : (
@@ -233,7 +248,7 @@ export default function MessageComposer({
                                     title={t('attach.add')}
                                     aria-label={t('attach.add')}
                                 >
-                                    +
+                                    <Icon name="plus" />
                                 </button>
                                 <input
                                     ref={fileInput}
@@ -254,7 +269,8 @@ export default function MessageComposer({
                             placeholder={resolvedPlaceholder}
                             value={text}
                             disabled={busy}
-                            onChange={(event) => setText(event.target.value)}
+                            maxLength={4000}
+                            onChange={(event) => setText(event.target.value.slice(0, 4000))}
                             onKeyDown={handleKeyDown}
                             onPaste={allowAttachments ? handlePaste : undefined}
                             rows={1}
@@ -270,7 +286,7 @@ export default function MessageComposer({
                                 title={t('attach.record')}
                                 aria-label={t('attach.record')}
                             >
-                                🎤
+                                <Icon name="mic" />
                             </button>
                         ) : (
                             <button
@@ -281,7 +297,7 @@ export default function MessageComposer({
                                 title={t('messages.send')}
                                 aria-label={t('messages.sendLabel')}
                             >
-                                <span className="icon-placeholder" aria-hidden="true" />
+                                <Icon name="send" />
                             </button>
                         )}
                     </>

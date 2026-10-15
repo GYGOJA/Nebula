@@ -26,6 +26,7 @@ func TestProcessAvatar(t *testing.T) {
 	if err != nil || img.Bounds().Dx() != 256 || img.Bounds().Dy() != 256 {
 		t.Fatalf("bad result %v %v", err, img.Bounds())
 	}
+
 	small := image.NewRGBA(image.Rect(0, 0, 100, 80))
 	var pb bytes.Buffer
 	png.Encode(&pb, small)

@@ -25,10 +25,11 @@ type Server struct {
 	tokens  *auth.TokenManager
 	db      *pgxpool.Pool
 	hub     *Hub
+	voice   *VoiceManager
 }
 
 func New(authService *service.AuthService, friendshipService *service.FriendshipService, tokens *auth.TokenManager, db *pgxpool.Pool) *Server {
-	return &Server{auth: authService, friends: friendshipService, tokens: tokens, db: db, hub: NewHub()}
+	return &Server{auth: authService, friends: friendshipService, tokens: tokens, db: db, hub: NewHub(), voice: NewVoiceManager()}
 }
 
 func (s *Server) Handler() http.Handler {
@@ -41,14 +42,27 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("/api/friends/", s.requireAuth(http.HandlerFunc(s.friendRoutes)))
 	mux.Handle("/api/me", s.requireAuth(http.HandlerFunc(s.profileRoutes)))
 	mux.Handle("/api/me/avatar", s.requireAuth(http.HandlerFunc(s.meAvatar)))
+	mux.Handle("/api/me/email", s.requireAuth(http.HandlerFunc(s.changeEmail)))
+	mux.Handle("/api/me/password", s.requireAuth(http.HandlerFunc(s.changePassword)))
 	mux.HandleFunc("/api/avatars/", s.serveAvatar)
+	mux.HandleFunc("/api/space-avatars/", s.serveSpaceAvatar)
 	mux.Handle("/api/users/", s.requireAuth(http.HandlerFunc(s.userRoutes)))
 	mux.Handle("/api/events", s.requireAuth(http.HandlerFunc(s.events)))
 	mux.Handle("/api/dm", s.requireAuth(http.HandlerFunc(s.dmRoutes)))
 	mux.Handle("/api/dm/", s.requireAuth(http.HandlerFunc(s.dmRoutes)))
-	mux.Handle("/api/spaces", s.requireAuth(http.HandlerFunc(s.emptyList)))
-	mux.Handle("/api/channels", s.requireAuth(http.HandlerFunc(s.emptyList)))
-	mux.Handle("/api/voice", s.requireAuth(http.HandlerFunc(s.emptyList)))
+	mux.Handle("/api/search/users", s.requireAuth(http.HandlerFunc(s.searchUsers)))
+	mux.Handle("/api/search/messages", s.requireAuth(http.HandlerFunc(s.searchMessages)))
+	mux.Handle("/api/search/spaces", s.requireAuth(http.HandlerFunc(s.searchSpaces)))
+	mux.Handle("/api/invites", s.requireAuth(http.HandlerFunc(s.inviteRoutes)))
+	mux.Handle("/api/invites/", s.requireAuth(http.HandlerFunc(s.inviteRoutes)))
+	mux.Handle("/api/spaces", s.requireAuth(http.HandlerFunc(s.spaceRoutes)))
+	mux.Handle("/api/spaces/", s.requireAuth(http.HandlerFunc(s.spaceRoutes)))
+	mux.Handle("/api/channels", s.requireAuth(http.HandlerFunc(s.channelRoutes)))
+	mux.Handle("/api/channels/", s.requireAuth(http.HandlerFunc(s.channelRoutes)))
+	mux.Handle("/api/voice", s.requireAuth(http.HandlerFunc(s.voiceRoutes)))
+	mux.Handle("/api/voice/", s.requireAuth(http.HandlerFunc(s.voiceRoutes)))
+	mux.Handle("/api/calls", s.requireAuth(http.HandlerFunc(s.callRoutes)))
+	mux.Handle("/api/calls/", s.requireAuth(http.HandlerFunc(s.callRoutes)))
 	return s.cors(mux)
 }
 
@@ -333,7 +347,7 @@ func friendRequestDTOs(entries []repository.FriendshipEntry) []map[string]any {
 	result := make([]map[string]any, 0, len(entries))
 	for _, entry := range entries {
 		user := entry.User
-		result = append(result, map[string]any{"id": entry.Friendship.ID, "userId": user.ID, "username": user.Username, "name": user.DisplayName, "displayName": user.DisplayName, "avatar": user.AvatarURL, "avatarUrl": user.AvatarURL, "status": entry.Friendship.Status, "createdAt": entry.Friendship.CreatedAt})
+		result = append(result, map[string]any{"id": entry.Friendship.ID, "userId": user.ID, "username": user.Username, "name": user.DisplayName, "displayName": user.DisplayName, "avatar": user.AvatarURL, "avatarUrl": user.AvatarURL, "bio": user.Bio, "description": user.Bio, "status": entry.Friendship.Status, "createdAt": entry.Friendship.CreatedAt})
 	}
 	return result
 }

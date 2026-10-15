@@ -98,6 +98,7 @@ func TestHubPublish(t *testing.T) {
 	if h.Online(a) {
 		t.Fatal("should be offline")
 	}
+
 	_, un := h.Subscribe(b)
 	defer un()
 	for i := 0; i < 500; i++ {
@@ -240,6 +241,7 @@ func TestDMAttachmentsIntegration(t *testing.T) {
 	if resp, _ = do("GET", imgURL, "", nil, ""); resp.StatusCode != 401 {
 		t.Fatalf("anon got %d", resp.StatusCode)
 	}
+
 	req, _ := http.NewRequest("GET", srv.URL+imgURL, nil)
 	req.Header.Set("Authorization", "Bearer "+tok(bob))
 	req.Header.Set("Range", "bytes=0-3")

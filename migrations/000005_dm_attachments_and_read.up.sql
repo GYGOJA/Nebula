@@ -1,6 +1,9 @@
+-- Вложения (изображения, видео, файлы, голосовые) и отметка прочтения личных сообщений.
 
 ALTER TABLE direct_messages ADD COLUMN IF NOT EXISTS read_at TIMESTAMPTZ;
 
+-- Сообщение может состоять только из вложения, поэтому пустой текст теперь допустим.
+-- Что текст не пуст, когда нет вложений, проверяет приложение.
 ALTER TABLE direct_messages DROP CONSTRAINT IF EXISTS direct_messages_content_check;
 ALTER TABLE direct_messages ADD CONSTRAINT direct_messages_content_check CHECK (length(content) <= 4000);
 

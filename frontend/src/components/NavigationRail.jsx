@@ -3,10 +3,13 @@ import { useEffect, useState } from 'react'
 import Logo from './Logo'
 import { api } from '@/api'
 import { useI18n } from '@/i18n'
+import { navPanel, useNavPanel } from '@/utils/navPanel'
+import Icon from "@/assets/icon/Icon.jsx";
 
 export default function NavigationRail({ activeSpaceId }) {
     const { t } = useI18n()
     const [spaces, setSpaces] = useState([])
+    const panelOpen = useNavPanel()
 
     useEffect(() => {
         let alive = true
@@ -28,6 +31,22 @@ export default function NavigationRail({ activeSpaceId }) {
                 <Logo size={42} />
             </div>
 
+            <button
+                type="button"
+                className={`rail__btn rail__menu${panelOpen ? ' is-open' : ''}`}
+                onClick={navPanel.toggle}
+                title={t('nav.menu')}
+                aria-label={t('nav.menu')}
+                aria-expanded={panelOpen}
+                aria-controls="app-sidebar"
+            >
+                <span className="rail__burger" aria-hidden="true">
+                    <i />
+                    <i />
+                    <i />
+                </span>
+            </button>
+
             <NavLink
                 to="/app"
                 end
@@ -39,7 +58,7 @@ export default function NavigationRail({ activeSpaceId }) {
                 title={t('nav.home')}
                 aria-label={t('nav.home')}
             >
-                <span className="icon-placeholder" aria-hidden="true" />
+                <Icon name="house" />
             </NavLink>
 
             <div className="rail__divider" />
@@ -54,10 +73,7 @@ export default function NavigationRail({ activeSpaceId }) {
                     title={space.name}
                     aria-label={space.name}
                 >
-                    <span
-                        className="space-icon-placeholder"
-                        aria-hidden="true"
-                    />
+                    <Icon name="users" />
                 </NavLink>
             ))}
 
@@ -67,7 +83,7 @@ export default function NavigationRail({ activeSpaceId }) {
                 title={t('nav.createSpace')}
                 aria-label={t('nav.createSpace')}
             >
-                <span className="icon-placeholder" aria-hidden="true" />
+                <Icon name="plus" />
             </NavLink>
         </aside>
     )

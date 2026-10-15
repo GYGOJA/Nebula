@@ -164,7 +164,7 @@ func processAvatar(data []byte) ([]byte, error) {
 	switch http.DetectContentType(data) {
 	case "image/jpeg", "image/png":
 	default:
-		return nil, errors.New("Допустимые форматы аватара: JPG, PNG, WebP")
+		return nil, errors.New("Допустимые форматы аватара: JPG и PNG")
 	}
 	cfg, _, err := image.DecodeConfig(bytes.NewReader(data))
 	if err != nil || cfg.Width < 1 || cfg.Height < 1 {
@@ -237,3 +237,66 @@ func cropResizeSquare(src image.Image, size int) *image.RGBA {
 }
 
 var _ = jpeg.Decode
+
+func spaceAvatarDir() string {
+	dir := os.Getenv("UPLOAD_DIR")
+	if dir == "" {
+		dir = "uploads"
+	}
+	return filepath.Join(dir, "space-avatars")
+}
+
+func spaceAvatarPath(id uuid.UUID) string { return filepath.Join(spaceAvatarDir(), id.String()+".png") }
+
+func saveSpaceAvatarFile(id uuid.UUID, data []byte) error {
+	if err := os.MkdirAll(spaceAvatarDir(), 0o755); err != nil {
+		return err
+	}
+	tmp, err := os.CreateTemp(spaceAvatarDir(), "upload-*.tmp")
+	if err != nil {
+		return err
+	}
+	name := tmp.Name()
+	if _, err := tmp.Write(data); err != nil {
+		tmp.Close()
+		os.Remove(name)
+		return err
+	}
+	if err := tmp.Close(); err != nil {
+		os.Remove(name)
+		return err
+	}
+	if err := os.Rename(name, spaceAvatarPath(id)); err != nil {
+		os.Remove(name)
+		return err
+	}
+	return nil
+}
+
+func (s *Server) serveSpaceAvatar(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet && r.Method != http.MethodHead {
+		writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "Метод не поддерживается"})
+		return
+	}
+	name := strings.TrimPrefix(r.URL.Path, "/api/space-avatars/")
+	id, err := uuid.Parse(strings.TrimSuffix(name, ".png"))
+	if err != nil || !strings.HasSuffix(name, ".png") {
+		http.NotFound(w, r)
+		return
+	}
+	f, err := os.Open(spaceAvatarPath(id))
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	defer f.Close()
+	info, err := f.Stat()
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	w.Header().Set("Content-Type", "image/png")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	w.Header().Set("Cache-Control", "public, max-age=86400")
+	http.ServeContent(w, r, "", info.ModTime(), f)
+}

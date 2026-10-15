@@ -3,6 +3,13 @@ import { api } from '@/api'
 import Avatar from './Avatar'
 import EmptyState from './EmptyState'
 import { useI18n } from '@/i18n'
+import RightPanel from './RightPanel'
+
+const TABS = [
+    { id: 'participants', icon: 'users', labelKey: 'rightbar.participants' },
+    { id: 'threads', icon: 'git-branch', labelKey: 'rightbar.threads' },
+    { id: 'files', icon: 'folder', labelKey: 'rightbar.files' },
+]
 
 export default function RightSidebar({ roomId }) {
     const { t } = useI18n()
@@ -11,7 +18,6 @@ export default function RightSidebar({ roomId }) {
     const [participants, setParticipants] = useState([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState('')
-
     useEffect(() => {
         let active = true
 
@@ -48,45 +54,7 @@ export default function RightSidebar({ roomId }) {
     }, [roomId])
 
     return (
-        <aside className="rightbar">
-            <div className="rightbar__tabs" role="tablist">
-                <button
-                    type="button"
-                    role="tab"
-                    aria-selected={tab === 'participants'}
-                    className={`rightbar__tab ${
-                        tab === 'participants' ? 'rightbar__tab--active' : ''
-                    }`}
-                    onClick={() => setTab('participants')}
-                >
-                    {t('rightbar.participants')}
-                </button>
-
-                <button
-                    type="button"
-                    role="tab"
-                    aria-selected={tab === 'threads'}
-                    className={`rightbar__tab ${
-                        tab === 'threads' ? 'rightbar__tab--active' : ''
-                    }`}
-                    onClick={() => setTab('threads')}
-                >
-                    {t('rightbar.threads')}
-                </button>
-
-                <button
-                    type="button"
-                    role="tab"
-                    aria-selected={tab === 'files'}
-                    className={`rightbar__tab ${
-                        tab === 'files' ? 'rightbar__tab--active' : ''
-                    }`}
-                    onClick={() => setTab('files')}
-                >
-                    {t('rightbar.files')}
-                </button>
-            </div>
-
+        <RightPanel tabs={TABS} tab={tab} onTabChange={setTab}>
             {loading && <p className="muted">{t('common.loading')}</p>}
 
             {!loading && error && (
@@ -105,6 +73,7 @@ export default function RightSidebar({ roomId }) {
 
                     {!room && (
                         <EmptyState
+                            icon="volume-2"
                             title={t('rightbar.noRoomTitle')}
                             description={t('rightbar.noRoomDesc')}
                         />
@@ -112,6 +81,7 @@ export default function RightSidebar({ roomId }) {
 
                     {room && participants.length === 0 && (
                         <EmptyState
+                            icon="users"
                             title={t('common.noOneYet')}
                             description={t('rightbar.emptyRoomDesc')}
                         />
@@ -148,6 +118,7 @@ export default function RightSidebar({ roomId }) {
 
             {!loading && !error && tab === 'threads' && (
                 <EmptyState
+                    icon="git-branch"
                     title={t('rightbar.noThreadsTitle')}
                     description={t('rightbar.noThreadsDesc')}
                 />
@@ -155,10 +126,11 @@ export default function RightSidebar({ roomId }) {
 
             {!loading && !error && tab === 'files' && (
                 <EmptyState
+                    icon="folder"
                     title={t('rightbar.noFilesTitle')}
                     description={t('rightbar.noFilesDesc')}
                 />
             )}
-        </aside>
+        </RightPanel>
     )
 }

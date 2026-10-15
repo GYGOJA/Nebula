@@ -1,13 +1,12 @@
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
-import NavigationRail from '@/components/NavigationRail'
-import Sidebar from '@/components/Sidebar'
+import { useEffect, useRef, useState } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import RightSidebar from '@/components/RightSidebar'
 import PageHeader from '@/components/PageHeader'
 import Avatar from '@/components/Avatar'
 import EmptyState from '@/components/EmptyState'
 import { api } from '@/api'
 import { useI18n } from '@/i18n'
+import Icon from "@/assets/icon/Icon.jsx";
 
 const TYPES = [
     { value: 'users', labelKey: 'search.typeUsers' },
@@ -17,17 +16,19 @@ const TYPES = [
 
 export default function Search() {
     const { t } = useI18n()
-    const [type, setType] = useState('users')
-    const [query, setQuery] = useState('')
+    const [params] = useSearchParams()
+    const initialType = TYPES.some((item) => item.value === params.get('type'))
+        ? params.get('type')
+        : 'users'
+    const [type, setType] = useState(initialType)
+    const [query, setQuery] = useState(params.get('q') || '')
     const [results, setResults] = useState([])
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState('')
     const [searched, setSearched] = useState(false)
 
-    const search = async (event) => {
-        event.preventDefault()
-
-        const value = query.trim()
+    const runSearch = async (rawValue, searchType) => {
+        const value = rawValue.trim()
 
         if (!value) {
             setResults([])
@@ -47,7 +48,7 @@ export default function Search() {
                 messages: api.searchMessages,
             }
 
-            const result = await methods[type](value)
+            const result = await methods[searchType](value)
             setResults(Array.isArray(result) ? result : [])
         } catch (err) {
             setResults([])
@@ -57,10 +58,24 @@ export default function Search() {
         }
     }
 
+    const search = (event) => {
+        event.preventDefault()
+        runSearch(query, type)
+    }
+
+    const lastParamQuery = useRef(null)
+
+    useEffect(() => {
+        const fromUrl = params.get('q') || ''
+        if (!fromUrl || lastParamQuery.current === fromUrl) return
+
+        lastParamQuery.current = fromUrl
+        setQuery(fromUrl)
+        runSearch(fromUrl, type)
+    }, [params])
+
     return (
         <div className="app-layout">
-            <NavigationRail />
-            <Sidebar />
 
             <main className="main">
                 <div className="main__content">
@@ -96,7 +111,10 @@ export default function Search() {
                                             ? 'btn--primary'
                                             : 'btn--ghost'
                                     }`}
-                                    onClick={() => setType(item.value)}
+                                    onClick={() => {
+                                        setType(item.value)
+                                        if (query.trim()) runSearch(query, item.value)
+                                    }}
                                 >
                                     {t(item.labelKey)}
                                 </button>
@@ -110,6 +128,7 @@ export default function Search() {
 
                     {!loading && !error && searched && results.length === 0 && (
                         <EmptyState
+                            icon="search"
                             title={t('search.emptyTitle')}
                             description={t('search.emptyDesc')}
                         />
@@ -148,7 +167,11 @@ export default function Search() {
 
                                     {type === 'spaces' && (
                                         <>
-                                            <span className="icon-placeholder" aria-hidden="true" />
+                                            <Avatar
+                                                src={item.avatarUrl || item.avatar_url || item.avatar}
+                                                label={item.name}
+                                                size={44}
+                                            />
                                             <div className="friend-row__info">
                                                 <div className="friend-row__name">
                                                     {item.name}

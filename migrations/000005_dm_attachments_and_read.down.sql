@@ -1,5 +1,6 @@
 DROP INDEX IF EXISTS idx_direct_messages_unread;
 DROP TABLE IF EXISTS dm_attachments;
+-- Сообщения без текста (только вложения) нельзя вернуть под старое ограничение.
 DELETE FROM direct_messages WHERE length(trim(content)) = 0;
 ALTER TABLE direct_messages DROP CONSTRAINT IF EXISTS direct_messages_content_check;
 ALTER TABLE direct_messages ADD CONSTRAINT direct_messages_content_check CHECK (length(trim(content)) > 0 AND length(content) <= 4000);

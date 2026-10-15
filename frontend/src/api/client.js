@@ -2,7 +2,7 @@ import { hasTranslation, t } from '@/i18n'
 
 export const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true'
 
-const API_URL = (import.meta.env.VITE_API_URL || '/api').replace(/\/+$/, '')
+export const API_URL = (import.meta.env.VITE_API_URL || '/api').replace(/\/+$/, '')
 
 const API_ORIGIN = (() => {
     try {
@@ -12,8 +12,17 @@ const API_ORIGIN = (() => {
     }
 })()
 
-export const assetUrl = (url) =>
-    typeof url === 'string' && url.startsWith('/api/') ? API_ORIGIN + url : url
+export const resolveAssetURL = (url) => {
+    if (typeof url !== 'string' || !url.trim()) return url || ''
+    if (/^(https?:|data:|blob:)/i.test(url)) return url
+    try {
+        return new URL(url, API_ORIGIN || window.location.origin).toString()
+    } catch {
+        return url
+    }
+}
+
+export const assetUrl = resolveAssetURL
 
 const TOKEN_KEY = 'nebula_token'
 const USER_KEY = 'nebula_user'
@@ -220,7 +229,6 @@ export const http = {
         }),
 }
 
-
 export function uploadWithProgress(path, formData, { onProgress, signal } = {}) {
     return new Promise((resolve, reject) => {
         const token = session.getToken()
@@ -369,10 +377,12 @@ export function subscribeEvents(onEvent, onStatus) {
                         try {
                             onEvent({ type, data: JSON.parse(data.join('\n')) })
                         } catch {
+
                         }
                     }
                 }
             } catch {
+
             }
 
             onStatus?.(false)

@@ -1,4 +1,5 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom'
+import { useAuth } from '@/context/AuthContext'
 
 import AuthLayout from '@/components/AuthLayout'
 import AppLayout from '@/components/AppLayout'
@@ -25,6 +26,7 @@ import {
 } from '@/pages/Spaces'
 
 import CreateSpace from '@/pages/CreateSpace'
+import SpaceSettings from '@/pages/SpaceSettings'
 
 import {
     DmList,
@@ -33,10 +35,15 @@ import {
 
 import VoiceRoom from '@/pages/VoiceRoom'
 
+function RootRedirect() {
+    const { isAuthenticated } = useAuth()
+    return <Navigate to={isAuthenticated ? '/app' : '/login'} replace />
+}
+
 export const router = createBrowserRouter([
     {
         path: '/',
-        element: <Navigate to="/app" replace />,
+        element: <RootRedirect />,
     },
     {
         element: <AuthLayout />,
@@ -67,6 +74,7 @@ export const router = createBrowserRouter([
             { path: 'spaces', element: <SpacesList /> },
             { path: 'spaces/new', element: <CreateSpace /> },
             { path: 'spaces/:spaceId', element: <SpaceDetail /> },
+            { path: 'spaces/:spaceId/settings', element: <SpaceSettings /> },
             { path: 'dm', element: <DmList /> },
             { path: 'dm/:userId', element: <DmChat /> },
             { path: 'voice/:roomId', element: <VoiceRoom /> },

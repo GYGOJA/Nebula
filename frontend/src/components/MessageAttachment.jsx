@@ -3,7 +3,6 @@ import { fetchBlob } from '@/api/client'
 import { useI18n } from '@/i18n'
 import { formatBytes, formatDuration } from '@/utils/format'
 
-// Грузит защищённый файл как blob, пока компонент на экране.
 function useBlobUrl(url, enabled = true) {
     const [state, setState] = useState({ src: '', error: false })
 
@@ -86,7 +85,6 @@ function VoiceAttachment({ attachment }) {
     const audioRef = useRef(null)
     const { src, error } = useBlobUrl(attachment.url, active)
 
-    // как только файл загрузился — запускаем воспроизведение
     useEffect(() => {
         if (src && active) audioRef.current?.play().catch(() => setPlaying(false))
     }, [src, active])
@@ -163,7 +161,6 @@ function VoiceAttachment({ attachment }) {
                     onLoadedMetadata={(e) => {
                         const d = e.currentTarget.duration
 
-                        // у записей MediaRecorder длительность часто Infinity — тогда верим серверу
                         if (Number.isFinite(d) && d > 0) setDuration(d * 1000)
                     }}
                     onError={() => setFailed(true)}

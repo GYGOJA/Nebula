@@ -1,9 +1,4 @@
 uploads/
-.idea
-.gitignore
-bin/
-dist/
-*.log
-vendor
 node_modules/
-.env
+frontend/node_modules/
+frontend/dist/

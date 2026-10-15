@@ -67,6 +67,8 @@ export default function Login() {
                             value={loginValue}
                             onChange={(e) => setLoginValue(e.target.value)}
                             disabled={loading}
+                            aria-invalid={error ? 'true' : undefined}
+                            aria-describedby={error ? 'login-error' : undefined}
                         />
                     </div>
 
@@ -85,6 +87,8 @@ export default function Login() {
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             disabled={loading}
+                            aria-invalid={error ? 'true' : undefined}
+                            aria-describedby={error ? 'login-error' : undefined}
                         />
 
                         <Link to="/recover" className="forgot-password">
@@ -95,6 +99,7 @@ export default function Login() {
 
                 {(error || notice) && (
                     <p
+                        id="login-error"
                         className={`auth-form-error ${error ? '' : 'auth-form-notice'}`.trim()}
                         role={error ? 'alert' : 'status'}
                     >

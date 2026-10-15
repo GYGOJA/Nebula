@@ -25,7 +25,7 @@ func NewHub() *Hub {
 }
 
 func (h *Hub) Subscribe(user uuid.UUID) (<-chan Event, func()) {
-	ch := make(chan Event, 64)
+	ch := make(chan Event, 256)
 	h.mu.Lock()
 	if h.subs[user] == nil {
 		h.subs[user] = make(map[chan Event]struct{})

@@ -5,6 +5,7 @@ import App from './App'
 import './styles/tokens.css'
 import './styles/reset.css'
 import './styles/globals.css'
+import './styles/space-settings.css'
 
 const rootElement = document.getElementById('root')
 

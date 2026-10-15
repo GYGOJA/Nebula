@@ -30,13 +30,17 @@ func userDTO(u *models.User) map[string]any {
 }
 
 type dmRow struct {
-	ID          uuid.UUID
-	Sender      uuid.UUID
-	Recipient   uuid.UUID
-	Content     string
-	Created     time.Time
-	ReadAt      *time.Time
-	Attachments []Attachment
+	ID            uuid.UUID
+	Sender        uuid.UUID
+	Recipient     uuid.UUID
+	Content       string
+	Created       time.Time
+	ReadAt        *time.Time
+	Attachments   []Attachment
+	EditedAt      *time.Time
+	ReplyToID     *uuid.UUID
+	ReplyToText   string
+	ReplyToAuthor string
 }
 
 func dmMessageDTO(m dmRow, me uuid.UUID, author *models.User) map[string]any {
@@ -59,6 +63,13 @@ func dmMessageDTO(m dmRow, me uuid.UUID, author *models.User) map[string]any {
 		"authorId": authorID,
 		"readAt":   m.ReadAt, "status": status,
 		"attachments": atts,
+		"editedAt":    m.EditedAt,
+		"replyTo": func() any {
+			if m.ReplyToID == nil {
+				return nil
+			}
+			return map[string]any{"id": *m.ReplyToID, "text": m.ReplyToText, "author": m.ReplyToAuthor}
+		}(),
 		"author": map[string]any{
 			"id": author.ID, "name": author.DisplayName, "displayName": author.DisplayName,
 			"avatar": str(author.AvatarURL),
@@ -199,7 +210,7 @@ func (s *Server) dmRoutes(w http.ResponseWriter, r *http.Request) {
 	}
 
 	parts := strings.Split(path, "/")
-	if len(parts) > 2 || (len(parts) == 2 && parts[1] != "messages" && parts[1] != "read") {
+	if len(parts) > 3 || (len(parts) == 2 && parts[1] != "messages" && parts[1] != "read") || (len(parts) == 3 && parts[1] != "messages") {
 		http.NotFound(w, r)
 		return
 	}
@@ -209,6 +220,15 @@ func (s *Server) dmRoutes(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if len(parts) == 3 {
+		messageID, parseErr := uuid.Parse(parts[2])
+		if parseErr != nil {
+			badRequest(w, "Некорректный ID сообщения")
+			return
+		}
+		s.dmMessageAction(w, r, me, otherID, messageID)
+		return
+	}
 	users := repository.NewUserRepository(s.db)
 	other, err := users.GetByID(r.Context(), otherID)
 	if err != nil {
@@ -243,14 +263,20 @@ func (s *Server) dmRoutes(w http.ResponseWriter, r *http.Request) {
 		if v, err := strconv.Atoi(r.URL.Query().Get("limit")); err == nil && v > 0 {
 			limit = min(v, maxDMLimit)
 		}
+
 		res, err := s.db.Query(r.Context(), `
-			SELECT id, sender_id, recipient_id, content, created_at, read_at FROM (
-				SELECT id, sender_id, recipient_id, content, created_at, read_at
+			SELECT t.id, t.sender_id, t.recipient_id, t.content, t.created_at, t.read_at, t.edited_at, t.reply_to_id,
+		       COALESCE(reply.content,''), COALESCE(reply_user.display_name,'')
+			FROM (
+				SELECT id, sender_id, recipient_id, content, created_at, read_at, edited_at, reply_to_id
 				FROM direct_messages
 				WHERE (sender_id = $1 AND recipient_id = $2) OR (sender_id = $2 AND recipient_id = $1)
 				ORDER BY created_at DESC, id DESC
 				LIMIT $3
-			) t ORDER BY created_at ASC, id ASC`, me, otherID, limit)
+			) t
+			LEFT JOIN direct_messages reply ON reply.id=t.reply_to_id
+			LEFT JOIN users reply_user ON reply_user.id=reply.sender_id
+			ORDER BY t.created_at ASC, t.id ASC`, me, otherID, limit)
 		if err != nil {
 			s.writeError(w, err)
 			return
@@ -260,7 +286,7 @@ func (s *Server) dmRoutes(w http.ResponseWriter, r *http.Request) {
 		var rows []dmRow
 		for res.Next() {
 			var m dmRow
-			if err := res.Scan(&m.ID, &m.Sender, &m.Recipient, &m.Content, &m.Created, &m.ReadAt); err != nil {
+			if err := res.Scan(&m.ID, &m.Sender, &m.Recipient, &m.Content, &m.Created, &m.ReadAt, &m.EditedAt, &m.ReplyToID, &m.ReplyToText, &m.ReplyToAuthor); err != nil {
 				s.writeError(w, err)
 				return
 			}
@@ -290,7 +316,7 @@ func (s *Server) dmRoutes(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) dmSend(w http.ResponseWriter, r *http.Request, me, otherID uuid.UUID, self, other *models.User) {
-	var text string
+	var text, replyToIDText string
 	var files []savedFile
 
 	ct := baseMime(r.Header.Get("Content-Type"))
@@ -308,6 +334,7 @@ func (s *Server) dmSend(w http.ResponseWriter, r *http.Request, me, otherID uuid
 		defer r.MultipartForm.RemoveAll()
 
 		text = strings.TrimSpace(r.FormValue("text"))
+		replyToIDText = strings.TrimSpace(r.FormValue("replyToId"))
 		headers := r.MultipartForm.File["files"]
 		if len(headers) > maxAttachmentsPerMsg {
 			badRequest(w, "Не более 10 файлов в одном сообщении")
@@ -338,8 +365,9 @@ func (s *Server) dmSend(w http.ResponseWriter, r *http.Request, me, otherID uuid
 		}
 	} else {
 		var input struct {
-			Text    string `json:"text"`
-			Content string `json:"content"`
+			Text      string `json:"text"`
+			Content   string `json:"content"`
+			ReplyToID string `json:"replyToId"`
 		}
 		if !decode(w, r, &input) {
 			return
@@ -348,6 +376,7 @@ func (s *Server) dmSend(w http.ResponseWriter, r *http.Request, me, otherID uuid
 		if text == "" {
 			text = strings.TrimSpace(input.Content)
 		}
+		replyToIDText = strings.TrimSpace(input.ReplyToID)
 	}
 
 	n := runes(text)
@@ -357,6 +386,23 @@ func (s *Server) dmSend(w http.ResponseWriter, r *http.Request, me, otherID uuid
 		return
 	}
 
+	var replyToID any
+	if replyToIDText != "" {
+		parsed, parseErr := uuid.Parse(replyToIDText)
+		if parseErr != nil {
+			removeSaved(files)
+			badRequest(w, "Некорректный ответ на сообщение")
+			return
+		}
+		var replyText, replyAuthor string
+		err := s.db.QueryRow(r.Context(), `SELECT m.content, u.display_name FROM direct_messages m JOIN users u ON u.id=m.sender_id WHERE m.id=$1 AND ((m.sender_id=$2 AND m.recipient_id=$3) OR (m.sender_id=$3 AND m.recipient_id=$2))`, parsed, me, otherID).Scan(&replyText, &replyAuthor)
+		if err != nil {
+			removeSaved(files)
+			badRequest(w, "Исходное сообщение не найдено в этом диалоге")
+			return
+		}
+		replyToID = parsed
+	}
 	tx, err := s.db.Begin(r.Context())
 	if err != nil {
 		removeSaved(files)
@@ -366,9 +412,13 @@ func (s *Server) dmSend(w http.ResponseWriter, r *http.Request, me, otherID uuid
 	defer tx.Rollback(r.Context())
 
 	msg := dmRow{Sender: me, Recipient: otherID, Content: text}
+	if parsed, ok := replyToID.(uuid.UUID); ok {
+		msg.ReplyToID = &parsed
+		_ = s.db.QueryRow(r.Context(), `SELECT m.content, u.display_name FROM direct_messages m JOIN users u ON u.id=m.sender_id WHERE m.id=$1 AND ((m.sender_id=$2 AND m.recipient_id=$3) OR (m.sender_id=$3 AND m.recipient_id=$2))`, parsed, me, otherID).Scan(&msg.ReplyToText, &msg.ReplyToAuthor)
+	}
 	if err := tx.QueryRow(r.Context(),
-		`INSERT INTO direct_messages (sender_id, recipient_id, content) VALUES ($1, $2, $3) RETURNING id, created_at`,
-		me, otherID, text).Scan(&msg.ID, &msg.Created); err != nil {
+		`INSERT INTO direct_messages (sender_id, recipient_id, content, reply_to_id) VALUES ($1, $2, $3, $4) RETURNING id, created_at`,
+		me, otherID, text, replyToID).Scan(&msg.ID, &msg.Created); err != nil {
 		removeSaved(files)
 		s.writeError(w, err)
 		return

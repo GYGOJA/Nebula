@@ -74,6 +74,7 @@ func (s *Server) profileRoutes(w http.ResponseWriter, r *http.Request) {
 				writeJSON(w, http.StatusNotFound, map[string]string{"error": "Профиль не найден"})
 				return
 			}
+
 			s.writeError(w, err)
 			return
 		}
@@ -91,7 +92,7 @@ func (s *Server) profileRoutes(w http.ResponseWriter, r *http.Request) {
 		DisplayName string  `json:"displayName"`
 		Name        string  `json:"name"`
 		Bio         string  `json:"bio"`
-		AvatarURL   string  `json:"avatarUrl"`
+		AvatarURL   *string `json:"avatarUrl"`
 		BirthDate   *string `json:"birthDate"`
 		StatusText  string  `json:"statusText"`
 		Pronouns    string  `json:"pronouns"`
@@ -111,7 +112,12 @@ func (s *Server) profileRoutes(w http.ResponseWriter, r *http.Request) {
 		displayName = username
 	}
 	bio := strings.TrimSpace(input.Bio)
-	avatar := strings.TrimSpace(input.AvatarURL)
+	var avatar string
+	if input.AvatarURL != nil {
+		avatar = strings.TrimSpace(*input.AvatarURL)
+	} else {
+		_ = s.db.QueryRow(r.Context(), `SELECT COALESCE(avatar_url, '') FROM users WHERE id = $1 AND deleted_at IS NULL`, id).Scan(&avatar)
+	}
 	status := strings.TrimSpace(input.StatusText)
 	pronouns := strings.TrimSpace(input.Pronouns)
 	website := strings.TrimSpace(input.Website)

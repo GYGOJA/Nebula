@@ -1,13 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
-import NavigationRail from '@/components/NavigationRail'
-import Sidebar from '@/components/Sidebar'
+import { useCallback, useEffect, useState } from 'react'
 import RightSidebar from '@/components/RightSidebar'
 import PageHeader from '@/components/PageHeader'
+import Icon from '@/assets/icon/Icon.jsx'
 import Avatar from '@/components/Avatar'
 import EmptyState from '@/components/EmptyState'
 import { api } from '@/api'
 import { useAuth } from '@/context/AuthContext'
-import { useI18n } from '@/i18n'
 
 const EMPTY_FORM = {
     displayName: '',
@@ -72,61 +70,10 @@ const formatDateInput = (value) => {
     return `${digits.slice(0, 2)}.${digits.slice(2, 4)}.${digits.slice(4)}`
 }
 
-const AVATAR_TYPES = ['image/jpeg', 'image/png', 'image/webp']
-const AVATAR_MAX_BYTES = 5 * 1024 * 1024
-const AVATAR_SIZE = 256
-
-// Обрезка до квадрата по центру и уменьшение до 256×256 прямо в браузере.
-// Заодно WebP превращается в PNG, который понимает сервер.
-async function cropAvatar(file) {
-    const url = URL.createObjectURL(file)
-
-    try {
-        const img = await new Promise((resolve, reject) => {
-            const image = new Image()
-            image.onload = () => resolve(image)
-            image.onerror = () => reject(new Error('unreadable'))
-            image.src = url
-        })
-
-        const side = Math.min(img.naturalWidth, img.naturalHeight)
-        if (!side) throw new Error('unreadable')
-
-        const size = Math.min(side, AVATAR_SIZE)
-        const canvas = document.createElement('canvas')
-        canvas.width = size
-        canvas.height = size
-
-        canvas.getContext('2d').drawImage(
-            img,
-            (img.naturalWidth - side) / 2,
-            (img.naturalHeight - side) / 2,
-            side,
-            side,
-            0,
-            0,
-            size,
-            size
-        )
-
-        return await new Promise((resolve, reject) =>
-            canvas.toBlob(
-                (blob) => (blob ? resolve(blob) : reject(new Error('unreadable'))),
-                'image/png'
-            )
-        )
-    } finally {
-        URL.revokeObjectURL(url)
-    }
-}
-
 export default function Profile() {
     const { updateUser } = useAuth()
-    const { t } = useI18n()
-    const fileInputRef = useRef(null)
-    const [pendingAvatar, setPendingAvatar] = useState(null)
-    const [avatarBusy, setAvatarBusy] = useState(false)
     const [profile, setProfile] = useState(null)
+    const [uploadingAvatar, setUploadingAvatar] = useState(false)
     const [form, setForm] = useState(EMPTY_FORM)
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
@@ -171,90 +118,56 @@ export default function Profile() {
         load()
     }, [load])
 
-    useEffect(
-        () => () => {
-            if (pendingAvatar?.previewUrl) {
-                URL.revokeObjectURL(pendingAvatar.previewUrl)
-            }
-        },
-        [pendingAvatar]
-    )
-
-    const applyProfile = (updated) => {
-        setProfile((previous) => ({ ...previous, ...updated }))
-        setForm((previous) => ({
-            ...previous,
-            avatarUrl: updated?.avatarUrl || '',
-        }))
-        updateUser({ avatar_url: updated?.avatarUrl || null })
-    }
-
-    const pickAvatar = async (event) => {
-        const file = event.target.files?.[0]
-        event.target.value = ''
-
-        if (!file) return
-
-        setError('')
-        setNotice('')
-
-        if (!AVATAR_TYPES.includes(file.type)) {
-            setError(t('profile.avatar.badType'))
-            return
-        }
-
-        if (file.size > AVATAR_MAX_BYTES) {
-            setError(t('profile.avatar.tooBig'))
-            return
-        }
-
-        try {
-            const blob = await cropAvatar(file)
-
-            setPendingAvatar({ blob, previewUrl: URL.createObjectURL(blob) })
-        } catch {
-            setError(t('profile.avatar.unreadable'))
-        }
-    }
-
-    const confirmAvatar = async () => {
-        if (!pendingAvatar) return
-
-        setAvatarBusy(true)
-        setError('')
-        setNotice('')
-
-        try {
-            applyProfile(await api.uploadAvatar(pendingAvatar.blob))
-            setPendingAvatar(null)
-            setNotice(t('profile.avatar.saved'))
-        } catch (err) {
-            setError(err?.message || t('profile.avatar.failed'))
-        } finally {
-            setAvatarBusy(false)
-        }
-    }
-
-    const deleteAvatar = async () => {
-        setAvatarBusy(true)
-        setError('')
-        setNotice('')
-
-        try {
-            applyProfile(await api.removeAvatar())
-            setNotice(t('profile.avatar.removed'))
-        } catch (err) {
-            setError(err?.message || t('profile.avatar.failed'))
-        } finally {
-            setAvatarBusy(false)
-        }
-    }
-
     const update = (field) => (event) => {
         setForm((previous) => ({
             ...previous,
             [field]: event.target.value,
         }))
+    }
+
+    const uploadAvatar = async (event) => {
+        const file = event.target.files?.[0]
+        event.target.value = ''
+        if (!file) return
+        if (!['image/png', 'image/jpeg'].includes(file.type)) {
+            setError('Допустимые форматы аватара: JPG и PNG')
+            return
+        }
+        if (file.size > 5 * 1024 * 1024) {
+            setError('Размер аватара не должен превышать 5 МБ')
+            return
+        }
+        setUploadingAvatar(true)
+        setError('')
+        setNotice('')
+        try {
+            const updated = await api.uploadAvatar(file)
+            setProfile((previous) => ({ ...previous, ...updated }))
+            setForm((previous) => ({ ...previous, avatarUrl: updated.avatarUrl || updated.avatar || '' }))
+            updateUser({ avatarUrl: updated.avatarUrl || updated.avatar || '', avatar: updated.avatarUrl || updated.avatar || '' })
+            setNotice('Аватар обновлён')
+        } catch (uploadError) {
+            setError(uploadError?.message || 'Не удалось загрузить аватар')
+        } finally {
+            setUploadingAvatar(false)
+        }
+    }
+
+    const removeAvatar = async () => {
+        setUploadingAvatar(true)
+        setError('')
+        setNotice('')
+        try {
+            const updated = await api.deleteAvatar()
+            setProfile((previous) => ({ ...previous, ...updated }))
+            setForm((previous) => ({ ...previous, avatarUrl: '' }))
+            updateUser({ avatarUrl: '', avatar: '' })
+            setNotice('Аватар удалён')
+        } catch (removeError) {
+            setError(removeError?.message || 'Не удалось удалить аватар')
+        } finally {
+            setUploadingAvatar(false)
+        }
     }
 
     const save = async (event) => {
@@ -294,7 +207,6 @@ export default function Profile() {
                 username,
                 bio: form.bio.trim(),
                 birthDate,
-                avatarUrl: form.avatarUrl.trim(),
                 statusText: form.statusText.trim(),
                 pronouns: form.pronouns.trim(),
                 website: form.website.trim(),
@@ -312,9 +224,10 @@ export default function Profile() {
             }))
             updateUser({
                 username: updated?.username,
+                displayName: updated?.displayName,
                 display_name: updated?.displayName,
-                avatar_url: updated?.avatarUrl || null,
-                bio: updated?.bio || null,
+                name: updated?.displayName,
+                bio: updated?.bio,
             })
             setNotice('Изменения сохранены')
         } catch (err) {
@@ -326,8 +239,6 @@ export default function Profile() {
 
     return (
         <div className="app-layout">
-            <NavigationRail />
-            <Sidebar />
 
             <main className="main">
                 <div className="main__content profile-page">
@@ -365,13 +276,12 @@ export default function Profile() {
                             <section className="profile-card profile-card--minimal">
                                 <Avatar
                                     src={
-                                        pendingAvatar?.previewUrl ||
                                         form.avatarUrl ||
                                         profile.avatarUrl ||
                                         profile.avatar
                                     }
                                     label={form.displayName || profile.name}
-                                    size={96}
+                                    size={76}
                                 />
 
                                 <div className="profile-card__identity">
@@ -395,63 +305,19 @@ export default function Profile() {
                                         </p>
                                     )}
                                 </div>
-
-                                <div className="profile-avatar-actions">
-                                    <input
-                                        ref={fileInputRef}
-                                        type="file"
-                                        accept={AVATAR_TYPES.join(',')}
-                                        hidden
-                                        onChange={pickAvatar}
-                                    />
-
-                                    {pendingAvatar ? (
-                                        <>
-                                            <button
-                                                type="button"
-                                                className="btn btn--primary"
-                                                onClick={confirmAvatar}
-                                                disabled={avatarBusy}
-                                            >
-                                                {avatarBusy
-                                                    ? t('profile.avatar.saving')
-                                                    : t('profile.avatar.save')}
-                                            </button>
-                                            <button
-                                                type="button"
-                                                className="btn btn--ghost"
-                                                onClick={() => setPendingAvatar(null)}
-                                                disabled={avatarBusy}
-                                            >
-                                                {t('profile.avatar.cancel')}
-                                            </button>
-                                            <small>{t('profile.avatar.preview')}</small>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <button
-                                                type="button"
-                                                className="btn btn--ghost"
-                                                onClick={() => fileInputRef.current?.click()}
-                                                disabled={avatarBusy}
-                                            >
-                                                {t('profile.avatar.change')}
-                                            </button>
-                                            {(form.avatarUrl || profile.avatarUrl) && (
-                                                <button
-                                                    type="button"
-                                                    className="btn btn--ghost"
-                                                    onClick={deleteAvatar}
-                                                    disabled={avatarBusy}
-                                                >
-                                                    {t('profile.avatar.remove')}
-                                                </button>
-                                            )}
-                                            <small>{t('profile.avatar.hint')}</small>
-                                        </>
-                                    )}
-                                </div>
                             </section>
+
+                            <div className="profile-avatar-actions">
+                                <label className="btn btn--primary profile-avatar-upload">
+                                    <Icon name="plus" />
+                                    <span>{uploadingAvatar ? 'Загрузка…' : 'Загрузить аватар'}</span>
+                                    <input type="file" accept="image/png,image/jpeg" onChange={uploadAvatar} disabled={uploadingAvatar} />
+                                </label>
+                                {(form.avatarUrl || profile.avatarUrl || profile.avatar) && (
+                                    <button type="button" className="btn btn--ghost" onClick={removeAvatar} disabled={uploadingAvatar}>Удалить аватар</button>
+                                )}
+                                <span className="muted">PNG или JPG · до 5 МБ</span>
+                            </div>
 
                             <form
                                 className="profile-form profile-form--minimal"
@@ -636,6 +502,7 @@ export default function Profile() {
 
                     {!loading && !profile && !error && (
                         <EmptyState
+                            icon="user"
                             title="Профиль недоступен"
                             description="Не удалось получить данные аккаунта."
                         />

@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, Navigate, useParams } from 'react-router-dom'
-import NavigationRail from '@/components/NavigationRail'
-import Sidebar from '@/components/Sidebar'
 import RightSidebar from '@/components/RightSidebar'
 import PageHeader from '@/components/PageHeader'
 import Avatar from '@/components/Avatar'
+import Icon from '@/assets/icon/Icon.jsx'
+import EmptyState from '@/components/EmptyState'
 import { api } from '@/api'
 import { useAuth } from '@/context/AuthContext'
 import { useI18n } from '@/i18n'
@@ -71,14 +71,15 @@ export default function UserProfile() {
 
     return (
         <div className="app-layout">
-            <NavigationRail />
-            <Sidebar />
-
             <main className="main">
                 <div className="main__content profile-page">
                     <PageHeader title={name || t('nav.profile')} />
 
-                    {loading && <p className="muted">{t('common.loading')}</p>}
+                    {loading && (
+                        <p className="muted profile-loading" role="status">
+                            {t('common.loading')}
+                        </p>
+                    )}
 
                     {error && (
                         <p className="auth-inline-error" role="alert">
@@ -87,13 +88,15 @@ export default function UserProfile() {
                     )}
 
                     {!loading && !user && (
-                        <button
-                            type="button"
-                            className="btn btn--ghost"
-                            onClick={load}
-                        >
-                            {t('common.retry')}
-                        </button>
+                        <div className="profile-retry">
+                            <button
+                                type="button"
+                                className="btn btn--ghost"
+                                onClick={load}
+                            >
+                                {t('common.retry')}
+                            </button>
+                        </div>
                     )}
 
                     {!loading && user && (
@@ -123,121 +126,134 @@ export default function UserProfile() {
                                         </p>
                                     )}
                                 </div>
+                            </section>
 
-                                <div className="profile-avatar-actions">
-                                    {user.relationship === 'self' && (
-                                        <Link
-                                            className="btn btn--ghost"
-                                            to="/app/profile"
-                                        >
-                                            {t('userProfile.editMine')}
-                                        </Link>
-                                    )}
+                            <div className="profile-avatar-actions">
+                                {user.relationship !== 'self' && (
+                                    <Link
+                                        className="btn btn--primary"
+                                        to={`/app/dm/${user.id}`}
+                                    >
+                                        {t('common.write')}
+                                    </Link>
+                                )}
 
-                                    {user.relationship !== 'self' && (
-                                        <Link
-                                            className="btn btn--primary"
-                                            to={`/app/dm/${user.id}`}
-                                        >
-                                            {t('common.write')}
-                                        </Link>
-                                    )}
+                                {user.relationship === 'none' && (
+                                    <button
+                                        type="button"
+                                        className="btn btn--ghost"
+                                        disabled={busy}
+                                        onClick={() =>
+                                            act(() =>
+                                                api.sendFriendRequest({
+                                                    username: user.username,
+                                                })
+                                            )
+                                        }
+                                    >
+                                        {t('userProfile.addFriend')}
+                                    </button>
+                                )}
 
-                                    {user.relationship === 'none' && (
+                                {user.relationship === 'outgoing' && (
+                                    <>
+                                        <span className="muted">
+                                            {t('userProfile.requestSent')}
+                                        </span>
                                         <button
                                             type="button"
                                             className="btn btn--ghost"
                                             disabled={busy}
                                             onClick={() =>
                                                 act(() =>
-                                                    api.sendFriendRequest({
-                                                        username: user.username,
-                                                    })
+                                                    api.cancelFriend(user.requestId)
                                                 )
                                             }
                                         >
-                                            {t('userProfile.addFriend')}
+                                            {t('userProfile.cancelRequest')}
                                         </button>
-                                    )}
+                                    </>
+                                )}
 
-                                    {user.relationship === 'outgoing' && (
-                                        <>
-                                            <small>
-                                                {t('userProfile.requestSent')}
-                                            </small>
-                                            <button
-                                                type="button"
-                                                className="btn btn--ghost"
-                                                disabled={busy}
-                                                onClick={() =>
-                                                    act(() =>
-                                                        api.cancelFriendRequest(
-                                                            user.requestId
-                                                        )
-                                                    )
-                                                }
-                                            >
-                                                {t('userProfile.cancelRequest')}
-                                            </button>
-                                        </>
-                                    )}
+                                {user.relationship === 'incoming' && (
+                                    <>
+                                        <span className="muted">
+                                            {t('userProfile.incoming')}
+                                        </span>
+                                        <button
+                                            type="button"
+                                            className="btn btn--primary"
+                                            disabled={busy}
+                                            onClick={() =>
+                                                act(() =>
+                                                    api.acceptFriend(user.requestId)
+                                                )
+                                            }
+                                        >
+                                            {t('friends.accept')}
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className="btn btn--ghost"
+                                            disabled={busy}
+                                            onClick={() =>
+                                                act(() =>
+                                                    api.declineFriend(user.requestId)
+                                                )
+                                            }
+                                        >
+                                            {t('friends.decline')}
+                                        </button>
+                                    </>
+                                )}
 
-                                    {user.relationship === 'incoming' && (
-                                        <>
-                                            <small>
-                                                {t('userProfile.incoming')}
-                                            </small>
-                                            <button
-                                                type="button"
-                                                className="btn btn--primary"
-                                                disabled={busy}
-                                                onClick={() =>
-                                                    act(() =>
-                                                        api.acceptFriend(
-                                                            user.requestId
-                                                        )
-                                                    )
-                                                }
-                                            >
-                                                {t('friends.accept')}
-                                            </button>
-                                            <button
-                                                type="button"
-                                                className="btn btn--ghost"
-                                                disabled={busy}
-                                                onClick={() =>
-                                                    act(() =>
-                                                        api.declineFriend(
-                                                            user.requestId
-                                                        )
-                                                    )
-                                                }
-                                            >
-                                                {t('friends.decline')}
-                                            </button>
-                                        </>
-                                    )}
+                                {user.relationship === 'friends' && (
+                                    <>
+                                        <span className="muted">
+                                            {t('userProfile.isFriend')}
+                                        </span>
+                                        <button
+                                            type="button"
+                                            className="btn btn--ghost"
+                                            disabled={busy}
+                                            onClick={() =>
+                                                act(() =>
+                                                    api.removeFriend(user.id)
+                                                )
+                                            }
+                                        >
+                                            {t('friends.remove')}
+                                        </button>
+                                    </>
+                                )}
+                            </div>
 
-                                    {user.relationship === 'friends' && (
-                                        <>
-                                            <small>
-                                                {t('userProfile.isFriend')}
-                                            </small>
-                                            <button
-                                                type="button"
-                                                className="btn btn--ghost"
-                                                disabled={busy}
-                                                onClick={() =>
-                                                    act(() =>
-                                                        api.removeFriend(user.id)
-                                                    )
-                                                }
-                                            >
-                                                {t('friends.remove')}
-                                            </button>
-                                        </>
-                                    )}
-                                </div>
+                            <section className="profile-edit-section profile-shared-spaces">
+                                <h2>{t('userProfile.sharedChannels')}</h2>
+                                {user.sharedChannels?.length ? (
+                                    <div className="profile-shared-spaces__list">
+                                        {user.sharedChannels.map((channel) => (
+                                            <Link key={channel.id} to={channel.type === 'voice' ? `/app/voice/${channel.id}` : `/app/channels/${channel.id}`} className="profile-shared-channel">
+                                                <span className="profile-shared-channel__icon"><Icon name={channel.type === 'voice' ? 'volume-2' : 'hash'} /></span>
+                                                <div><strong>{channel.name}</strong><span>{channel.spaceName}</span></div>
+                                            </Link>
+                                        ))}
+                                    </div>
+                                ) : <p className="muted">{t('userProfile.noSharedChannels')}</p>}
+                            </section>
+
+                            <section className="profile-edit-section profile-shared-spaces">
+                                <h2>{t('userProfile.sharedSpaces')}</h2>
+                                {user.sharedSpaces?.length ? (
+                                    <div className="profile-shared-spaces__list">
+                                        {user.sharedSpaces.map((space) => (
+                                            <Link key={space.id} to={`/app/spaces/${space.id}`} className="profile-shared-space">
+                                                <Avatar src={space.avatarUrl || space.avatar_url} label={space.name} size={36} />
+                                                <div><strong>{space.name}</strong><span>{space.description || t('userProfile.sharedSpaceMembers', { count: space.members || 0 })}</span></div>
+                                            </Link>
+                                        ))}
+                                    </div>
+                                ) : <p className="muted">{t('userProfile.noSharedSpaces')}</p>}
                             </section>
 
                             <section className="profile-edit-section">
@@ -268,6 +284,14 @@ export default function UserProfile() {
                                 ))}
                             </section>
                         </>
+                    )}
+
+                    {!loading && !user && !error && (
+                        <EmptyState
+                            icon="user"
+                            title={t('userProfile.loadFailed')}
+                            description=""
+                        />
                     )}
                 </div>
             </main>

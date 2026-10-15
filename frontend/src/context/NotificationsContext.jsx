@@ -54,7 +54,7 @@ function playBeep() {
             osc.stop(now + i * 0.12 + 0.2)
         })
     } catch {
-        // звук необязателен
+
     }
 }
 
@@ -81,7 +81,6 @@ export function NotificationsProvider({ children }) {
         tRef.current = t
     }, [t])
 
-    // Подписка на события для страниц (чат, список диалогов).
     const subscribe = useCallback((handler) => {
         listeners.current.add(handler)
         return () => listeners.current.delete(handler)
@@ -112,7 +111,7 @@ export function NotificationsProvider({ children }) {
             const result = await api.getDmUnread()
             setUnread(result?.byUser || {})
         } catch {
-            // не критично
+
         }
     }, [])
 
@@ -139,7 +138,6 @@ export function NotificationsProvider({ children }) {
         const inThisChat = locationRef.current === `/app/dm/${peerId}`
         const visible = document.visibilityState === 'visible' && document.hasFocus()
 
-        // Если чат открыт и на виду — сообщение сразу считается прочитанным.
         if (inThisChat && visible) {
             api.markDmRead(peerId).catch(() => {})
             return
@@ -176,7 +174,7 @@ export function NotificationsProvider({ children }) {
                     notification.close()
                 }
             } catch {
-                // некоторые браузеры запрещают конструктор — игнорируем
+
             }
         }
     }, [describe, navigate, pushToast])
@@ -188,7 +186,9 @@ export function NotificationsProvider({ children }) {
 
         const stop = subscribeEvents(
             (event) => {
+                window.dispatchEvent(new CustomEvent('nebula:event', { detail: { type: event.type, data: event.data } }))
                 if (event.type === 'message') handleMessage(event.data)
+                if (event.type === 'channel_message') window.dispatchEvent(new CustomEvent('nebula:channel-message', { detail: event.data }))
 
                 if (event.type === 'read_self') {
                     setUnread((map) => {
@@ -202,7 +202,7 @@ export function NotificationsProvider({ children }) {
             },
             (online) => {
                 setConnected(online)
-                // после переподключения могли пропустить события
+
                 if (online) {
                     refreshUnread()
                     listeners.current.forEach((handler) => handler({ type: 'reconnected' }))
@@ -213,7 +213,6 @@ export function NotificationsProvider({ children }) {
         return stop
     }, [isAuthenticated, user?.id, handleMessage, refreshUnread])
 
-    // Разрешение на системные уведомления спрашиваем один раз, в ответ на действие пользователя.
     useEffect(() => {
         if (!isAuthenticated || typeof Notification === 'undefined') return undefined
         if (Notification.permission !== 'default' || !readPrefs().desktop) return undefined
@@ -233,7 +232,6 @@ export function NotificationsProvider({ children }) {
         [unread]
     )
 
-    // Счётчик в заголовке вкладки.
     useEffect(() => {
         const base = document.title.replace(/^\(\d+\)\s*/, '')
         document.title = totalUnread ? `(${totalUnread}) ${base}` : base

@@ -21,6 +21,16 @@ export function AuthProvider({ children }) {
         setUser(null)
     }, [])
 
+    const updateUser = useCallback((patch) => {
+        setUser((previous) => {
+            if (!previous) return previous
+
+            const next = { ...previous, ...patch }
+            session.save(session.getToken(), next)
+            return next
+        })
+    }, [])
+
     const startSession = useCallback((payload) => {
         const { user: nextUser, token } = payload || {}
 
@@ -48,15 +58,6 @@ export function AuthProvider({ children }) {
             window.removeEventListener('storage', onStorage)
         }
     }, [logout])
-
-    const updateUser = useCallback((patch) => {
-        setUser((previous) => {
-            const next = { ...(previous || {}), ...patch }
-            const token = session.getToken()
-            if (token) session.save(token, next)
-            return next
-        })
-    }, [])
 
     const login = useCallback(
         async (credentials) => startSession(await api.login(credentials)),

@@ -1,7 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import NavigationRail from '@/components/NavigationRail'
-import Sidebar from '@/components/Sidebar'
 import RightSidebar from '@/components/RightSidebar'
 import PageHeader from '@/components/PageHeader'
 import Avatar from '@/components/Avatar'
@@ -59,18 +57,6 @@ export default function Friends() {
         }
     }
 
-    const cancelRequest = async (id) => {
-        setError('')
-        setNotice('')
-        try {
-            await api.cancelFriendRequest(id)
-            setNotice('Заявка отменена')
-            await load()
-        } catch (err) {
-            setError(err?.message || 'Не удалось отменить заявку')
-        }
-    }
-
     const handleRequest = async (id, action) => {
         setError('')
 
@@ -100,8 +86,6 @@ export default function Friends() {
 
     return (
         <div className="app-layout">
-            <NavigationRail />
-            <Sidebar />
 
             <main className="main">
                 <div className="main__content">
@@ -133,7 +117,7 @@ export default function Friends() {
                     {error && <p className="auth-inline-error">{error}</p>}
                     {loading && <p className="muted">{t('common.loading')}</p>}
 
-                    {!loading && (
+                    {!loading && !error && (
                         <>
                             <section className="friends__section">
                                 <h2 className="section-title">{t('friends.incoming')}</h2>
@@ -147,19 +131,15 @@ export default function Friends() {
                                                 key={request.id}
                                                 className="friend-row"
                                             >
-                                                <Link to={`/app/users/${request.userId}`}>
-                                                    <Avatar
-                                                        src={request.avatarUrl || request.avatar}
-                                                        label={request.name}
-                                                        size={44}
-                                                    />
-                                                </Link>
+                                                <Avatar
+                                                    src={request.avatarUrl || request.avatar}
+                                                    label={request.name}
+                                                    size={44}
+                                                />
 
                                                 <div className="friend-row__info">
                                                     <div className="friend-row__name">
-                                                        <Link to={`/app/users/${request.userId}`}>
-                                                            {request.displayName || request.name}
-                                                        </Link>
+                                                        {request.displayName || request.name}
                                                     </div>
                                                     <div className="friend-row__status">
                                                         {t('friends.requestLabel')}
@@ -188,30 +168,11 @@ export default function Friends() {
                             </section>
 
                             <section className="friends__section">
-                                <h2 className="section-title">Исходящие заявки</h2>
-                                {requests.outgoing.length === 0 ? (
-                                    <p className="muted">Нет заявок, ожидающих ответа</p>
-                                ) : (
-                                    <div className="friend-list">
-                                        {requests.outgoing.map((request) => (
-                                            <div key={request.id} className="friend-row">
-                                                <Avatar src={request.avatarUrl || request.avatar} label={request.name} size={44} />
-                                                <div className="friend-row__info">
-                                                    <div className="friend-row__name">{request.displayName || request.name}</div>
-                                                    <div className="friend-row__status">Ожидает ответа</div>
-                                                </div>
-                                                <button type="button" className="btn btn--ghost" onClick={() => cancelRequest(request.id)}>Отменить заявку</button>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </section>
-
-                            <section className="friends__section">
                                 <h2 className="section-title">{t('friends.mine')}</h2>
 
                                 {friends.length === 0 ? (
                                     <EmptyState
+                                        icon="users"
                                         title={t('friends.emptyTitle')}
                                         description={t('friends.emptyDesc')}
                                     />
