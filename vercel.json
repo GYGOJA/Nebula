@@ -3,8 +3,8 @@
   "services": {
     "backend": {
       "root": ".",
-      "runtime": "go",
-      "entrypoint": "cmd/api/main.go"
+      "framework": "go",
+      "entrypoint": "."
     },
     "frontend": {
       "root": "frontend",
