@@ -1,4 +1,4 @@
-module github.com/TheLonger011/Nebula
+module github.com/GYGOJA/Nebula
 
 go 1.27.0
 
