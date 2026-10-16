@@ -6,13 +6,13 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/TheLonger011/Nebula/internal/auth"
-	"github.com/TheLonger011/Nebula/internal/config"
-	"github.com/TheLonger011/Nebula/internal/database"
-	"github.com/TheLonger011/Nebula/internal/httpapi"
-	"github.com/TheLonger011/Nebula/internal/mail"
-	"github.com/TheLonger011/Nebula/internal/repository"
-	"github.com/TheLonger011/Nebula/internal/service"
+	"github.com/GYGOJA/Nebula/internal/auth"
+	"github.com/GYGOJA/Nebula/internal/config"
+	"github.com/GYGOJA/Nebula/internal/database"
+	"github.com/GYGOJA/Nebula/internal/httpapi"
+	"github.com/GYGOJA/Nebula/internal/mail"
+	"github.com/GYGOJA/Nebula/internal/repository"
+	"github.com/GYGOJA/Nebula/internal/service"
 )
 
 func main() {

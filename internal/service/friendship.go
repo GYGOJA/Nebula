@@ -5,8 +5,8 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/TheLonger011/Nebula/internal/models"
-	"github.com/TheLonger011/Nebula/internal/repository"
+	"github.com/GYGOJA/Nebula/internal/models"
+	"github.com/GYGOJA/Nebula/internal/repository"
 	"github.com/google/uuid"
 )
 

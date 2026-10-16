@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/TheLonger011/Nebula/internal/models"
+	"github.com/GYGOJA/Nebula/internal/models"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"

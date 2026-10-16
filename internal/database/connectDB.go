@@ -3,7 +3,7 @@ package database
 import (
 	"context"
 	"fmt"
-	"github.com/TheLonger011/Nebula/internal/config"
+	"github.com/GYGOJA/Nebula/internal/config"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 

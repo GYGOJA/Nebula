@@ -9,7 +9,7 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/TheLonger011/Nebula/internal/repository"
+	"github.com/GYGOJA/Nebula/internal/repository"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )

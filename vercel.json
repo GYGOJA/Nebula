@@ -3,8 +3,8 @@
   "services": {
     "backend": {
       "root": ".",
-      "runtime": "go",
-      "entrypoint": "cmd/api/main.go"
+      "framework": "go",
+      "entrypoint": "cmd/api"
     },
     "frontend": {
       "root": "frontend",
@@ -12,7 +12,13 @@
     }
   },
   "rewrites": [
-    { "source": "/api/(.*)", "destination": { "service": "backend" } },
-    { "source": "/(.*)", "destination": { "service": "frontend" } }
+    {
+      "source": "/api/(.*)",
+      "destination": { "service": "backend" }
+    },
+    {
+      "source": "/(.*)",
+      "destination": { "service": "frontend" }
+    }
   ]
 }

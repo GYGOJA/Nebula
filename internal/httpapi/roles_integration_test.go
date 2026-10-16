@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/TheLonger011/Nebula/internal/auth"
+	"github.com/GYGOJA/Nebula/internal/auth"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 )

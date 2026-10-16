@@ -7,9 +7,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/TheLonger011/Nebula/internal/models"
-	"github.com/TheLonger011/Nebula/internal/repository"
-	"github.com/TheLonger011/Nebula/internal/service"
+	"github.com/GYGOJA/Nebula/internal/models"
+	"github.com/GYGOJA/Nebula/internal/repository"
+	"github.com/GYGOJA/Nebula/internal/service"
 	"github.com/google/uuid"
 )
 

@@ -6,7 +6,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/TheLonger011/Nebula/internal/auth"
+	"github.com/GYGOJA/Nebula/internal/auth"
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
