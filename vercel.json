@@ -3,19 +3,12 @@
   "services": {
     "backend": {
       "root": ".",
-      "runtime": "go"
+      "runtime": "go",
+      "entrypoint": "cmd/api/main.go"
     },
     "frontend": {
       "root": "frontend",
-      "framework": "vite",
-      "bindings": [
-        {
-          "type": "service",
-          "service": "backend",
-          "format": "url",
-          "env": "VITE_API_URL"
-        }
-      ]
+      "framework": "vite"
     }
   },
   "rewrites": [
