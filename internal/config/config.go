@@ -1,0 +1,106 @@
+package config
+
+import (
+	"fmt"
+	"github.com/joho/godotenv"
+	"log"
+	"os"
+)
+
+type JWTConfig struct {
+	Secret string
+}
+
+type Config struct {
+	DB           DBConfig
+	Redis        RedisConfig
+	Server       ServerConfig
+	JWT          JWTConfig
+	Verification VerificationConfig
+}
+
+type DBConfig struct {
+	Host     string
+	Port     string
+	Username string
+	Password string
+	Database string
+}
+
+type RedisConfig struct {
+	Addr string
+}
+
+type ServerConfig struct {
+	Port string
+}
+
+type VerificationConfig struct {
+	From     string
+	Password string
+}
+
+func Load() (*Config, error) {
+	err := godotenv.Load()
+	if err != nil {
+		log.Println("Error loading .env file")
+	}
+
+	cfg := &Config{
+		DB: DBConfig{
+			Host:     os.Getenv("DB_HOST"),
+			Port:     os.Getenv("DB_PORT"),
+			Username: os.Getenv("DB_USER"),
+			Password: os.Getenv("DB_PASSWORD"),
+			Database: os.Getenv("DB_NAME"),
+		},
+		Redis: RedisConfig{
+			Addr: os.Getenv("REDIS_ADDR"),
+		},
+		Server: ServerConfig{
+			Port: os.Getenv("SERVER_PORT"),
+		},
+		JWT: JWTConfig{
+			Secret: os.Getenv("JWT_SECRET"),
+		},
+		Verification: VerificationConfig{
+			From:     os.Getenv("EMAIL_FROM"),
+			Password: os.Getenv("EMAIL_PASSWORD"),
+		},
+	}
+
+	if cfg.JWT.Secret == "" {
+		return nil, fmt.Errorf("JWT secret not set")
+	}
+	if cfg.DB.Host == "" {
+		return nil, fmt.Errorf("DB_HOST env var not set")
+	}
+	if cfg.DB.Port == "" {
+		return nil, fmt.Errorf("DB_PORT env var not set")
+	}
+	if cfg.DB.Username == "" {
+		return nil, fmt.Errorf("DB_USER env var not set")
+	}
+	if cfg.DB.Password == "" {
+		return nil, fmt.Errorf("DB_PASSWORD env var not set")
+	}
+	if cfg.Redis.Addr == "" {
+		return nil, fmt.Errorf("REDIS_ADDR env var not set")
+	}
+	if cfg.Verification.From == "" {
+		return nil, fmt.Errorf("EMAIL_FROM env var not set")
+	}
+	if cfg.Verification.Password == "" {
+		return nil, fmt.Errorf("EMAIL_PASSWORD env var not set")
+	}
+
+	return cfg, nil
+}
+
+func (c DBConfig) String() string {
+	return fmt.Sprintf("Host: %s, Port: %s, User: %s, Password: %s", c.Host, c.Port, c.Username, "****")
+}
+
+func (c VerificationConfig) String() string {
+	return fmt.Sprintf("From: %s, Password: %s", c.From, "****")
+}

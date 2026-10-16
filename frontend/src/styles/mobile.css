@@ -1,0 +1,504 @@
+/* ==========================================================================
+   Phone layout fixes (loaded last so it wins over the earlier rules)
+   - channel settings no longer squeezed into a 240px column
+   - members / threads / files panel: aligned, full-width, touch-sized rows
+   - space welcome page header (back, menu, channels)
+   - left drawer with spaces and direct messages
+   ========================================================================== */
+
+/* Header controls that only exist on phones */
+.menu-btn,
+.space-topbar,
+.mmenu,
+.mmenu-handle,
+.mmenu-backdrop,
+.space-welcome__channels,
+.space-settings__toprow .menu-btn,
+.space-settings__toprow .space-nav-btn { display: none; }
+
+.space-settings__toprow { display: block; }
+
+.menu-burger {
+    position: relative;
+    display: block;
+    width: 18px;
+    height: 14px;
+}
+
+.menu-burger i {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 2px;
+    border-radius: 2px;
+    background: currentColor;
+}
+
+.menu-burger i:nth-child(1) { top: 0; }
+.menu-burger i:nth-child(2) { top: 6px; }
+.menu-burger i:nth-child(3) { top: 12px; }
+
+@media (max-width: 767px) {
+    /* ---------- shared header buttons ---------- */
+    .menu-btn {
+        display: grid;
+        place-items: center;
+        flex: 0 0 40px;
+        width: 40px;
+        height: 40px;
+        padding: 0;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: var(--bg-card);
+        color: var(--text-primary);
+        cursor: pointer;
+    }
+
+    /* ---------- space welcome page ---------- */
+    .app-layout--space > .space-welcome {
+        position: relative;
+        flex-direction: column;
+        justify-content: flex-start;
+        align-items: stretch;
+        padding: 0;
+    }
+
+    .space-topbar {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex: 0 0 auto;
+        padding: max(10px, env(safe-area-inset-top, 0px)) 14px 10px;
+        border-bottom: 1px solid var(--border);
+        background: var(--bg-page);
+    }
+
+    .space-topbar__back {
+        display: flex;
+        align-items: center;
+        flex: 1 1 auto;
+        gap: 8px;
+        min-width: 0;
+        color: var(--text-primary);
+        font-size: 16px;
+        font-weight: 700;
+    }
+
+    .space-topbar__title {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .space-welcome__inner {
+        margin: auto;
+        padding: 24px 0;
+    }
+
+    .space-welcome__channels {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        --icon-color: currentColor;
+        --icon-size: 16px;
+    }
+
+    /* ---------- channel settings ---------- */
+    .app-layout--settings {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .app-layout--settings > .space-settings {
+        grid-column: 1;
+        width: 100%;
+        height: 100%;
+    }
+
+    .space-settings__header {
+        padding: max(10px, env(safe-area-inset-top, 0px)) 16px 0;
+    }
+
+    .space-settings__toprow {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .space-settings__toprow .menu-btn,
+    .space-settings__toprow .space-nav-btn { display: grid; }
+
+    .space-settings__toprow .space-settings__back {
+        flex: 1 1 auto;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: 14px;
+    }
+
+    .space-settings__header h1 {
+        margin: 12px 0 10px;
+        font-size: 22px;
+    }
+
+    .space-settings__tabs {
+        flex-wrap: nowrap;
+        gap: 2px;
+        margin: 0 -16px;
+        padding: 0 16px;
+        overflow-x: auto;
+        scrollbar-width: none;
+    }
+
+    .space-settings__tabs::-webkit-scrollbar { display: none; }
+
+    .space-settings__tabs button {
+        flex: 0 0 auto;
+        padding: 10px 12px;
+        white-space: nowrap;
+    }
+
+    .space-settings__body {
+        padding: 18px 16px 28px;
+    }
+
+    .ss-panel { max-width: 100%; }
+
+    .ss-avatar-row {
+        flex-wrap: wrap;
+        gap: 14px 16px;
+    }
+
+    .ss-avatar-actions {
+        flex: 1 1 160px;
+        min-width: 0;
+    }
+
+    .ss-avatar-actions .btn { white-space: nowrap; }
+    .ss-avatar-actions .ss-hint { flex: 1 1 100%; }
+
+    .space-settings .settings-form,
+    .space-settings .settings-form__field,
+    .space-settings .input,
+    .space-settings textarea {
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+
+    .space-settings textarea.input { resize: vertical; }
+
+    .ss-actions .btn { flex: 1 1 auto; }
+    .ss-danger { max-width: 100%; }
+    .ss-access { overflow-x: auto; }
+    .ss-perms { grid-template-columns: minmax(0, 1fr); }
+
+    /* ---------- right panel: members list ---------- */
+    .rightbar .rightbar__section-title {
+        margin: 18px 0 6px;
+        padding: 0 4px;
+        font-size: 12px;
+        font-weight: 700;
+    }
+
+    .rightbar .rightbar__section-title:first-child { margin-top: 4px; }
+
+    .rightbar .space-members__role-group { margin-bottom: 4px; }
+
+    .rightbar .space-members__role {
+        margin: 12px 0 6px;
+        padding: 0 4px;
+    }
+
+    .rightbar .space-members__user {
+        box-sizing: border-box;
+        width: 100%;
+        gap: 14px;
+        margin-bottom: 4px;
+        padding: 8px 12px;
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.04);
+    }
+
+    .rightbar .space-members__user:active { background: var(--nav-hover); }
+
+    .rightbar .space-members__user > div:last-child {
+        flex: 1 1 auto;
+        gap: 1px;
+        min-width: 0;
+    }
+
+    .rightbar .space-members__user strong {
+        font-size: 15px;
+        line-height: 1.25;
+    }
+
+    .rightbar .space-members__user span {
+        overflow: hidden;
+        font-size: 12px;
+        line-height: 1.3;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .rightbar .space-members__avatar,
+    .rightbar .space-members__avatar .avatar {
+        flex: 0 0 44px;
+        width: 44px;
+        height: 44px;
+    }
+
+    .rightbar .space-members__dot {
+        right: -1px;
+        bottom: -1px;
+        width: 13px;
+        height: 13px;
+    }
+
+    /* Panels open by swipe only: no edge handles on phones. */
+    .rightbar__handle,
+    .mmenu-handle { display: none !important; }
+
+    /* ---------- left drawer: spaces + direct messages ---------- */
+    .mmenu-handle {
+        position: fixed;
+        z-index: 44;
+        top: calc(50% - 36px);
+        left: 0;
+        display: grid;
+        place-items: center;
+        width: 22px;
+        height: 72px;
+        padding: 0;
+        border: 1px solid var(--nav-line);
+        border-left: 0;
+        border-radius: 0 14px 14px 0;
+        background: var(--nav-bg);
+        color: var(--nav-accent);
+        box-shadow: 4px 6px 18px rgba(0, 0, 0, 0.25);
+        opacity: 0.85;
+        cursor: pointer;
+        transition: opacity 0.25s ease, transform 0.35s var(--nav-ease, ease);
+    }
+
+    .mmenu-handle .menu-burger { width: 12px; height: 12px; }
+    .mmenu-handle .menu-burger i:nth-child(2) { top: 5px; }
+    .mmenu-handle .menu-burger i:nth-child(3) { top: 10px; }
+
+    .mmenu-handle.is-hidden {
+        opacity: 0;
+        pointer-events: none;
+        transform: translateX(-100%);
+    }
+
+    .mmenu-backdrop {
+        display: block;
+        position: fixed;
+        z-index: 80;
+        inset: 0;
+        padding: 0;
+        border: 0;
+        background: rgba(0, 0, 0, 0.55);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s ease;
+    }
+
+    .mmenu-backdrop.is-open { opacity: 1; pointer-events: auto; }
+
+    .mmenu {
+        position: fixed;
+        z-index: 81;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        display: flex;
+        flex-direction: column;
+        width: min(86vw, 330px);
+        padding-top: env(safe-area-inset-top, 0px);
+        background: var(--nav-bg);
+        color: var(--nav-fg);
+        transform: translateX(-105%);
+        visibility: hidden;
+        box-shadow: none;
+        transition:
+            transform 0.35s var(--nav-ease, ease),
+            box-shadow 0.3s ease,
+            visibility 0s linear 0.35s;
+    }
+
+    .mmenu.is-open {
+        transform: none;
+        visibility: visible;
+        box-shadow: inset -1px 0 0 var(--nav-line), 24px 0 50px rgba(0, 0, 0, 0.45);
+        transition-delay: 0s;
+    }
+
+    .mmenu__head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex: 0 0 auto;
+        padding: 12px 12px 12px 16px;
+        border-bottom: 1px solid var(--nav-line);
+    }
+
+    .mmenu__brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: var(--nav-fg-strong);
+        font-size: 18px;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+    }
+
+    .mmenu__close,
+    .mmenu__plus {
+        --icon-color: currentColor;
+
+        display: grid;
+        place-items: center;
+        padding: 0;
+        border: 0;
+        background: var(--nav-hover);
+        color: var(--nav-fg-strong);
+        cursor: pointer;
+    }
+
+    .mmenu__close { width: 38px; height: 38px; border-radius: 12px; }
+
+    .mmenu__plus {
+        width: 28px;
+        height: 28px;
+        border-radius: 9px;
+        color: var(--nav-accent);
+        --icon-size: 16px;
+    }
+
+    .mmenu__scroll {
+        flex: 1 1 auto;
+        min-height: 0;
+        padding: 6px 10px calc(var(--mnav-h, 73px) + 12px);
+        overflow-y: auto;
+        overscroll-behavior: contain;
+    }
+
+    .mmenu__title {
+        margin: 16px 0 6px;
+        padding: 0 8px;
+        color: var(--nav-fg);
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+    }
+
+    .mmenu__title--row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .mmenu__row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-height: 52px;
+        padding: 6px 8px;
+        border-radius: 14px;
+        color: var(--nav-fg);
+        font-size: 15px;
+        font-weight: 600;
+    }
+
+    .mmenu__row:active { background: var(--nav-hover); }
+
+    .mmenu__row.is-active {
+        background: var(--nav-hover);
+        color: var(--nav-accent);
+    }
+
+    .mmenu__name {
+        flex: 1 1 auto;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .mmenu .avatar { flex: 0 0 40px; }
+
+    .mmenu__space-avatar { border-radius: 12px; overflow: hidden; }
+    .mmenu__space-avatar .avatar__image { width: 100%; height: 100%; object-fit: cover; }
+
+    .mmenu__badge {
+        --icon-color: var(--nav-accent);
+        --icon-size: 20px;
+
+        display: grid;
+        place-items: center;
+        flex: 0 0 40px;
+        width: 40px;
+        height: 40px;
+        border-radius: 12px;
+        background: var(--nav-hover);
+    }
+
+    .mmenu__badge--add {
+        border: 1px dashed var(--nav-line);
+        background: transparent;
+    }
+
+    .mmenu__row--add { color: var(--nav-fg-strong); }
+
+    .mmenu__status {
+        flex: 0 0 auto;
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        background: #6f6f6f;
+    }
+
+    .mmenu__status--online { background: #3ba55d; }
+    .mmenu__status--voice { background: var(--nav-accent); }
+
+    .mmenu__empty {
+        padding: 6px 8px;
+        color: var(--nav-fg);
+        font-size: 13px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .mmenu,
+    .mmenu-backdrop,
+    .mmenu-handle { transition-duration: 0.01ms !important; }
+}
+
+/* Swipes must never pan the page or the message list sideways. */
+@media (max-width: 767px) {
+    html, body, #root, .app-layout, .chat, .chat__messages {
+        overflow-x: hidden;
+        overscroll-behavior-x: none;
+    }
+    .chat, .chat__messages, .voice-page__body { touch-action: pan-y pinch-zoom; }
+    .chat__messages { overflow-wrap: anywhere; }
+    .chat__messages pre, .chat__messages table { touch-action: pan-x pan-y; }
+}
+
+/* Attachment menu sits right after the attachment, at its bottom. */
+.message__attach-wrap { display: flex; align-items: flex-end; gap: 8px; width: auto; max-width: 100%; }
+.message__attach-wrap > :first-child { flex: 0 1 auto; min-width: 0; }
+.message__attach-wrap > .message__menu { position: relative; left: auto; bottom: auto; margin: 0; flex: 0 0 auto; }
+.message__attach-wrap .message__menu-list { top: auto; bottom: 32px; left: auto; right: 0; }
+
+/* Right panel: same full height as the left menu (covers the bottom bar too). */
+@media (max-width: 767px) {
+    .rightbar-backdrop { z-index: 80; inset: 0; }
+    .rightbar__panel {
+        z-index: 81;
+        bottom: 0;
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+    }
+}
