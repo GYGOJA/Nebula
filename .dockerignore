@@ -1,0 +1,9 @@
+.git
+.env
+.env.*
+!.env.docker.example
+uploads
+frontend
+*.whl
+*.md
+Makefile

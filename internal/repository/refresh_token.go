@@ -73,3 +73,41 @@ func (r *RefreshTokenRepository) Revoke(ctx context.Context, id uuid.UUID) error
 	}
 	return nil
 }
+
+// Consume atomically revokes an active (not revoked, not expired) refresh token
+// and returns it. Two concurrent refreshes with the same token cannot both succeed.
+func (r *RefreshTokenRepository) Consume(ctx context.Context, hash string) (*models.RefreshToken, error) {
+	const q = `
+		UPDATE refresh_tokens
+		SET revoked_at = NOW()
+		WHERE token_hash = $1 AND revoked_at IS NULL AND expires_at > NOW()
+		RETURNING ` + refreshColumns
+
+	var t models.RefreshToken
+	err := r.db.QueryRow(ctx, q, hash).Scan(
+		&t.ID,
+		&t.UserID,
+		&t.TokenHash,
+		&t.UserAgent,
+		&t.ExpiresAt,
+		&t.RevokedAt,
+		&t.CreatedAt,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, fmt.Errorf("consume refresh token: %w", err)
+	}
+	return &t, nil
+}
+
+// RevokeAllForUser signs the user out everywhere (used after a password reset).
+func (r *RefreshTokenRepository) RevokeAllForUser(ctx context.Context, userID uuid.UUID) error {
+	const q = `UPDATE refresh_tokens SET revoked_at = NOW() WHERE user_id = $1 AND revoked_at IS NULL`
+
+	if _, err := r.db.Exec(ctx, q, userID); err != nil {
+		return fmt.Errorf("revoke user refresh tokens: %w", err)
+	}
+	return nil
+}

@@ -1,8 +1,9 @@
-.idea
-.gitignore
-bin/
-dist/
-*.log
-vendor
+uploads/
 node_modules/
+frontend/node_modules/
+frontend/dist/
 .env
+frontend/.env
+node_modules/
+frontend/node_modules/
+*.whl
