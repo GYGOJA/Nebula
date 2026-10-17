@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -436,10 +437,12 @@ func friendRequestDTOs(entries []repository.FriendshipEntry) []map[string]any {
 	return result
 }
 
+// cors разрешает запросы с локального фронтенда и с доменов, указанных
+// в переменной окружения CORS_ORIGINS (через запятую).
 func (s *Server) cors(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		origin := r.Header.Get("Origin")
-		if origin == "http://localhost:5173" || origin == "http://127.0.0.1:5173" {
+		if origin != "" && isAllowedOrigin(origin) {
 			w.Header().Set("Access-Control-Allow-Origin", origin)
 			w.Header().Set("Vary", "Origin")
 			w.Header().Set("Access-Control-Allow-Credentials", "true")
@@ -452,6 +455,27 @@ func (s *Server) cors(next http.Handler) http.Handler {
 		}
 		next.ServeHTTP(w, r)
 	})
+}
+
+// isAllowedOrigin проверяет origin по списку:
+//   - localhost:5173 / 127.0.0.1:5173 — для локальной разработки
+//   - всё, что перечислено в CORS_ORIGINS (через запятую)
+//   - любые домены *.vercel.app — для превью-деплоев Vercel
+func isAllowedOrigin(origin string) bool {
+	if origin == "http://localhost:5173" || origin == "http://127.0.0.1:5173" {
+		return true
+	}
+	if env := strings.TrimSpace(os.Getenv("CORS_ORIGINS")); env != "" {
+		for _, item := range strings.Split(env, ",") {
+			if strings.TrimSpace(item) == origin {
+				return true
+			}
+		}
+	}
+	if strings.HasSuffix(origin, ".vercel.app") {
+		return true
+	}
+	return false
 }
 
 func method(w http.ResponseWriter, r *http.Request, expected string) bool {
